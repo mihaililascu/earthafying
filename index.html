@@ -40,6 +40,32 @@
   .dobGrid select{font-family:inherit;font-size:1rem;padding:13px 8px;border-radius:12px;border:2px solid transparent;background:#fbf7ec;color:#1a1f12;outline:none;-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center}
   .dobGrid select:focus{border-color:var(--amber)}
   #dobDay{flex:.7} #dobMonth{flex:1.5} #dobYear{flex:1}
+  /* ===== Photo text editor (Stage 1) ===== */
+  .editImg{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:8px 14px;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
+  .txtEditor{position:fixed;inset:0;z-index:200;background:#05070a;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .te-stage{position:relative;touch-action:none;overflow:hidden;border-radius:6px;background:#000}
+  .te-stage img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
+  .te-layer{position:absolute;inset:0}
+  .te-block{position:absolute;color:#fff;font-weight:600;line-height:1.15;white-space:pre;text-align:center;padding:.15em .35em;cursor:move;user-select:none;
+    text-shadow:0 1px 10px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.75);
+    background:radial-gradient(ellipse at center,rgba(0,0,0,.45),rgba(0,0,0,0) 70%);
+    transform:translate(-50%,-50%);touch-action:none}
+  .te-block.sel{outline:1.5px dashed rgba(255,255,255,.7);outline-offset:4px}
+  .te-hint{position:fixed;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;color:rgba(255,255,255,.7);font-size:.78rem;pointer-events:none;padding:0 16px}
+  .te-toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:14px 10px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}
+  .te-btn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:22px;padding:11px 16px;font-family:inherit;font-size:.92rem;font-weight:600;cursor:pointer}
+  .te-btn.te-done{background:linear-gradient(120deg,var(--coral),var(--amber));border:none}
+  .te-btn.te-del{background:rgba(220,60,60,.35);border-color:rgba(255,120,120,.4)}
+  .te-inputbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;padding:14px 12px calc(14px + env(safe-area-inset-bottom));background:rgba(0,0,0,.94);align-items:flex-end;z-index:201}
+  .te-inputbar textarea{flex:1;background:#1a1f12;color:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:1rem;resize:none;max-height:30vh}
+  .te-sheet{position:fixed;inset:0;z-index:202;background:rgba(0,0,0,.55);display:flex;align-items:flex-end}
+  .te-sheet-card{width:100%;max-height:72vh;background:var(--surface);border-top-left-radius:20px;border-top-right-radius:20px;border:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .te-sheet-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;font-weight:700;color:var(--text);border-bottom:1px solid var(--border)}
+  .te-sheet-x{background:none;border:none;color:var(--muted);font-size:1.1rem;cursor:pointer}
+  .te-sheet-list{overflow-y:auto;padding:8px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+  .te-prompt{display:flex;flex-direction:column;gap:3px;text-align:left;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:8px;cursor:pointer}
+  .te-prompt-main{color:var(--text);font-size:1.05rem;font-weight:600}
+  .te-prompt-sub{color:var(--muted);font-size:.8rem}
   button.go{width:100%;margin-top:20px;font-family:inherit;font-weight:600;font-size:1.02rem;padding:14px;border-radius:12px;border:none;color:#fff;background:linear-gradient(120deg,var(--coral),var(--amber));cursor:pointer}
   button.go:disabled{opacity:.6}
   .msg{margin-top:16px;font-size:.9rem;min-height:1.2em;text-align:center}
@@ -330,6 +356,7 @@
       <div class="preview hide" id="preview">
         <img id="previewImg" alt="preview" />
         <button class="removeImg" onclick="clearPhoto()">&times;</button>
+        <button class="editImg" onclick="teOpen()">✏️ Add text</button>
       </div>
       <div class="row">
         <div class="leftrow">
@@ -898,8 +925,238 @@
   $("avatarCam").addEventListener("change",onAvatarPicked);
   $("photoBtn").addEventListener("click",openPhotoSheet);
 
+  /* ===== Photo text editor (Stage 1) ===== */
+  var TE_FONTS = [
+    { label:"Clean",   css:"'Outfit', system-ui, -apple-system, sans-serif" },
+    { label:"Elegant", css:"Georgia, 'Times New Roman', serif" },
+    { label:"Soft",    css:"'Trebuchet MS', 'Segoe UI', sans-serif" }
+  ];
+  var te = { blocks:[], sel:null, font:0, natW:0, natH:0, dispW:0, dispH:0, drag:null, pinch:null };
+
+  function teOpen(){
+    if(!pendingFile){ setAppMsg("Add a photo first.","err"); return; }
+    var url = URL.createObjectURL(pendingFile);
+    var img = new Image();
+    img.onload = function(){
+      te.natW = img.naturalWidth; te.natH = img.naturalHeight;
+      var maxW = Math.min(window.innerWidth - 20, 560);
+      var maxH = window.innerHeight - 150;
+      var r = Math.min(maxW/te.natW, maxH/te.natH);
+      te.dispW = Math.round(te.natW*r); te.dispH = Math.round(te.natH*r);
+      var stage = $("teStage");
+      stage.style.width = te.dispW+"px"; stage.style.height = te.dispH+"px";
+      $("teImg").src = url;
+      te.blocks = []; te.sel = null; te.font = 0;
+      $("teLayer").innerHTML = "";
+      teUpdateFontBtn(); teUpdateDelBtn();
+      $("txtEditor").classList.remove("hide");
+      document.body.style.overflow = "hidden";
+    };
+    img.src = url;
+  }
+  function teUpdateFontBtn(){ var b=$("teFontBtn"); b.style.fontFamily = TE_FONTS[te.font].css; b.textContent = "Aa · "+TE_FONTS[te.font].label; }
+  function teUpdateDelBtn(){ $("teDelBtn").classList.toggle("hide", !te.sel); }
+  function teGet(id){ for(var i=0;i<te.blocks.length;i++) if(te.blocks[i].id===id) return te.blocks[i]; return null; }
+
+  function teAddText(){ $("teInput").value=""; $("teInputBar").classList.remove("hide"); $("teToolbar").classList.add("hide"); setTimeout(function(){$("teInput").focus();},50); }
+  function teCommitText(){
+    var t = $("teInput").value.replace(/\s+$/,"");
+    $("teInputBar").classList.add("hide"); $("teToolbar").classList.remove("hide");
+    if(!t.trim()) return;
+    teCreateBlock(t);
+  }
+  function teCreateBlock(text){
+    var blk = { id:"b"+Date.now()+Math.floor(Math.random()*9999), text:text, fontIdx:te.font, xf:0.5, yf:0.5, sizef:0.08 };
+    te.blocks.push(blk);
+    teRenderBlock(blk);
+    teSelect(blk.id);
+  }
+  /* Unity prompts (Stage 2) */
+  var TE_PROMPTS = [
+    { text:"We're all from here", sub:"English · the Earthafying motto" },
+    { text:"One sky, one home", sub:"English" },
+    { text:"Same sun, same moon", sub:"English" },
+    { text:"Kindness needs no translation", sub:"English" },
+    { text:"We belong to each other", sub:"English" },
+    { text:"Strangers are friends we haven't met", sub:"English" },
+    { text:"Ubuntu", sub:"Nguni · I am because we are" },
+    { text:"Sawubona", sub:"Zulu · I see you" },
+    { text:"Namaste", sub:"Sanskrit · the light in me honours the light in you" },
+    { text:"Aloha", sub:"Hawaiian · love, peace, compassion" },
+    { text:"Salaam", sub:"Arabic · peace" },
+    { text:"Shalom", sub:"Hebrew · peace" },
+    { text:"Paz", sub:"Spanish · peace" },
+    { text:"Amani", sub:"Swahili · peace" },
+    { text:"和", sub:"Japanese · harmony" },
+    { text:"Meraki", sub:"Greek · to do something with soul and love" }
+  ];
+  function teBuildPrompts(){
+    var list = $("tePromptList");
+    if(list.children.length) return;
+    TE_PROMPTS.forEach(function(p){
+      var b = document.createElement("button");
+      b.className = "te-prompt";
+      var m = document.createElement("span"); m.className="te-prompt-main"; m.textContent=p.text;
+      var s = document.createElement("span"); s.className="te-prompt-sub"; s.textContent=p.sub;
+      b.appendChild(m); b.appendChild(s);
+      b.addEventListener("click",function(){ teCreateBlock(p.text); teClosePrompts(); });
+      list.appendChild(b);
+    });
+  }
+  function teOpenPrompts(){ teBuildPrompts(); $("tePrompts").classList.remove("hide"); }
+  function teClosePrompts(){ $("tePrompts").classList.add("hide"); }
+  function teRenderBlock(blk){
+    var el = document.createElement("div");
+    el.className = "te-block"; el.id = blk.id; el.textContent = blk.text;
+    $("teLayer").appendChild(el);
+    tePosition(blk);
+    teAttachDrag(el, blk);
+  }
+  function tePosition(blk){
+    var el = document.getElementById(blk.id); if(!el) return;
+    el.style.left = (blk.xf*te.dispW)+"px";
+    el.style.top = (blk.yf*te.dispH)+"px";
+    el.style.fontSize = (blk.sizef*te.dispW)+"px";
+    el.style.fontFamily = TE_FONTS[blk.fontIdx].css;
+  }
+  function teSelect(id){
+    te.sel = id;
+    Array.prototype.forEach.call($("teLayer").children,function(c){ c.classList.toggle("sel", c.id===id); });
+    teUpdateDelBtn();
+    var blk = teGet(id); if(blk){ te.font = blk.fontIdx; teUpdateFontBtn(); }
+  }
+  function teCycleFont(){
+    te.font = (te.font+1) % TE_FONTS.length;
+    teUpdateFontBtn();
+    var blk = teGet(te.sel);
+    if(blk){ blk.fontIdx = te.font; tePosition(blk); }
+  }
+  function teDeleteSelected(){
+    if(!te.sel) return;
+    var el = document.getElementById(te.sel); if(el) el.remove();
+    te.blocks = te.blocks.filter(function(b){return b.id!==te.sel;});
+    te.sel = null; teUpdateDelBtn();
+  }
+  function teAttachDrag(el, blk){
+    var pointers = {};
+    el.addEventListener("pointerdown",function(e){
+      e.preventDefault(); teSelect(blk.id);
+      try{ el.setPointerCapture(e.pointerId); }catch(_){}
+      pointers[e.pointerId] = {x:e.clientX,y:e.clientY};
+      var ids = Object.keys(pointers);
+      if(ids.length===2){
+        var a=pointers[ids[0]], b=pointers[ids[1]];
+        te.pinch = { startDist: Math.hypot(a.x-b.x,a.y-b.y), startSize: blk.sizef };
+      } else {
+        te.drag = { startX:e.clientX, startY:e.clientY, startXf:blk.xf, startYf:blk.yf };
+      }
+    });
+    el.addEventListener("pointermove",function(e){
+      if(!pointers[e.pointerId]) return;
+      pointers[e.pointerId] = {x:e.clientX,y:e.clientY};
+      var ids = Object.keys(pointers);
+      if(ids.length===2 && te.pinch){
+        var a=pointers[ids[0]], b=pointers[ids[1]];
+        var d = Math.hypot(a.x-b.x,a.y-b.y);
+        var ns = te.pinch.startSize * (d/te.pinch.startDist);
+        blk.sizef = Math.max(0.03, Math.min(0.4, ns));
+        tePosition(blk);
+      } else if(te.drag){
+        blk.xf = Math.max(0, Math.min(1, te.drag.startXf + (e.clientX-te.drag.startX)/te.dispW));
+        blk.yf = Math.max(0, Math.min(1, te.drag.startYf + (e.clientY-te.drag.startY)/te.dispH));
+        tePosition(blk);
+      }
+    });
+    function up(e){
+      delete pointers[e.pointerId];
+      if(Object.keys(pointers).length<2) te.pinch=null;
+      if(Object.keys(pointers).length===0) te.drag=null;
+    }
+    el.addEventListener("pointerup",up);
+    el.addEventListener("pointercancel",up);
+  }
+  function teCancel(){ $("txtEditor").classList.add("hide"); document.body.style.overflow=""; }
+  async function teDone(){
+    try{
+      if(document.fonts && document.fonts.ready){ try{ await document.fonts.ready; }catch(_){} }
+      var blob = await teBake();
+      if(blob){
+        pendingFile = new File([blob], "edited.jpg", {type:"image/jpeg"});
+        $("previewImg").src = URL.createObjectURL(blob);
+        $("preview").classList.remove("hide");
+      }
+    }catch(err){ setAppMsg("Couldn't apply text: "+(err.message||err),"err"); }
+    teCancel();
+  }
+  function teBake(){
+    return new Promise(function(resolve,reject){
+      var maxDim = 1280;
+      var r = Math.min(1, maxDim/Math.max(te.natW,te.natH));
+      var cw = Math.round(te.natW*r), ch = Math.round(te.natH*r);
+      var canvas = document.createElement("canvas");
+      canvas.width=cw; canvas.height=ch;
+      var ctx = canvas.getContext("2d");
+      var img = new Image();
+      img.onload = function(){
+        ctx.drawImage(img,0,0,cw,ch);
+        te.blocks.forEach(function(blk){
+          var fontPx = blk.sizef * cw;
+          var lines = String(blk.text).split("\n");
+          ctx.font = "600 "+fontPx+"px "+TE_FONTS[blk.fontIdx].css;
+          ctx.textAlign="center"; ctx.textBaseline="middle";
+          var lineH = fontPx*1.15;
+          var totalH = lineH*lines.length;
+          var maxW = 0;
+          lines.forEach(function(L){ maxW=Math.max(maxW,ctx.measureText(L).width); });
+          var cx = blk.xf*cw, cy = blk.yf*ch;
+          var gw = maxW/2 + fontPx*0.6, gh = totalH/2 + fontPx*0.45;
+          var grad = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(gw,gh)*1.15);
+          grad.addColorStop(0,"rgba(0,0,0,0.5)");
+          grad.addColorStop(0.7,"rgba(0,0,0,0.32)");
+          grad.addColorStop(1,"rgba(0,0,0,0)");
+          ctx.save(); ctx.fillStyle=grad;
+          ctx.fillRect(cx-gw*1.4, cy-gh*1.4, gw*2.8, gh*2.8); ctx.restore();
+          ctx.save();
+          ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=fontPx*0.35;
+          ctx.fillStyle="#fff";
+          var startY = cy - totalH/2 + lineH/2;
+          lines.forEach(function(L,i){ ctx.fillText(L, cx, startY + i*lineH); });
+          ctx.restore();
+        });
+        canvas.toBlob(function(b){ b?resolve(b):reject(new Error("could not render")); },"image/jpeg",0.85);
+      };
+      img.onerror=function(){ reject(new Error("could not read photo")); };
+      img.src = URL.createObjectURL(pendingFile);
+    });
+  }
+
   (async function(){const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user);})();
 </script>
+  <div id="txtEditor" class="txtEditor hide">
+    <div class="te-hint">+ Text to add words · drag to move · pinch with two fingers to resize</div>
+    <div class="te-stage" id="teStage">
+      <img id="teImg" alt="editing" />
+      <div id="teLayer" class="te-layer"></div>
+    </div>
+    <div class="te-toolbar" id="teToolbar">
+      <button class="te-btn" onclick="teCancel()">Cancel</button>
+      <button class="te-btn" onclick="teAddText()">+ Text</button>
+      <button class="te-btn" onclick="teOpenPrompts()">✨ Prompts</button>
+      <button class="te-btn" id="teFontBtn" onclick="teCycleFont()">Aa</button>
+      <button class="te-btn te-del hide" id="teDelBtn" onclick="teDeleteSelected()">Delete</button>
+      <button class="te-btn te-done" onclick="teDone()">Done</button>
+    </div>
+    <div id="teInputBar" class="te-inputbar hide">
+      <textarea id="teInput" rows="2" placeholder="Type here…"></textarea>
+      <button class="te-btn te-done" onclick="teCommitText()">Add</button>
+    </div>
+    <div id="tePrompts" class="te-sheet hide">
+      <div class="te-sheet-card" onclick="event.stopPropagation()">
+        <div class="te-sheet-head"><span>Unity prompts</span><button class="te-sheet-x" onclick="teClosePrompts()">✕</button></div>
+        <div class="te-sheet-list" id="tePromptList"></div>
+      </div>
+    </div>
+  </div>
   <div id="photoViewer" class="hide" onclick="closePhoto(event)">
     <div class="pvBar">
       <button onclick="savePhoto(event)">⬇ Save</button>
