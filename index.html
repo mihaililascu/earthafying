@@ -424,7 +424,16 @@
     loadFeed();loadPeople();
   }
 
+  var eaSub=false; /* true when showing a sub-view (People / Me / someone's profile) with a pushed history entry */
   function switchView(v){
+    if(v==="feed"){
+      if(eaSub){ try{ history.back(); return; }catch(e){} }
+    } else {
+      if(!eaSub){ try{ history.pushState({eaSub:true},""); }catch(e){} eaSub=true; }
+    }
+    showViewInternal(v);
+  }
+  function showViewInternal(v){
     $("navFeed").classList.toggle("active",v==="feed");
     $("navPeople").classList.toggle("active",v==="people");
     $("navProfile").classList.toggle("active",v==="profile");
@@ -435,6 +444,14 @@
     if(v==="people") loadPeople();
     if(v==="profile") loadProfile();
   }
+  window.addEventListener("popstate",function(){
+    if(!currentUser) return;
+    var pv=$("photoViewer"); if(pv) pv.classList.add("hide");
+    var ps=$("photoSheet"); if(ps) ps.classList.add("hide");
+    document.body.style.overflow="";
+    eaSub=false;
+    showViewInternal("feed");
+  });
 
   /* ---------- FEED + LIKES + COMMENTS ---------- */
   async function loadFeed(){
@@ -715,6 +732,7 @@
   }
   async function viewUser(id){
     if(!id||!currentUser)return;
+    if(!eaSub){ try{ history.pushState({eaSub:true},""); }catch(e){} eaSub=true; }
     $("feedView").classList.add("hide");
     $("peopleView").classList.add("hide");
     $("profileView").classList.add("hide");
