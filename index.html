@@ -6,7 +6,7 @@
 <title>Earthafying</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&family=Inter:wght@600;800&family=Playfair+Display:wght@600;700&family=Caveat:wght@600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
@@ -52,7 +52,11 @@
     transform:translate(-50%,-50%);touch-action:none}
   .te-block.sel{outline:1.5px dashed rgba(255,255,255,.7);outline-offset:4px}
   .te-hint{position:fixed;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;color:rgba(255,255,255,.7);font-size:.78rem;pointer-events:none;padding:0 16px}
-  .te-toolbar{position:fixed;left:0;right:0;bottom:0;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:14px 10px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(0,0,0,.9),rgba(0,0,0,0))}
+  .te-bottom{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,rgba(0,0,0,.92),rgba(0,0,0,.55) 70%,rgba(0,0,0,0));padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .te-colors{display:flex;gap:10px;overflow-x:auto;padding:12px 14px 4px;-webkit-overflow-scrolling:touch}
+  .te-swatch{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.45);cursor:pointer;padding:0}
+  .te-swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--amber)}
+  .te-toolbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px 10px 4px}
   .te-btn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.2);border-radius:22px;padding:11px 16px;font-family:inherit;font-size:.92rem;font-weight:600;cursor:pointer}
   .te-btn.te-done{background:linear-gradient(120deg,var(--coral),var(--amber));border:none}
   .te-btn.te-del{background:rgba(220,60,60,.35);border-color:rgba(255,120,120,.4)}
@@ -927,11 +931,13 @@
 
   /* ===== Photo text editor (Stage 1) ===== */
   var TE_FONTS = [
-    { label:"Clean",   css:"'Outfit', system-ui, -apple-system, sans-serif" },
-    { label:"Elegant", css:"Georgia, 'Times New Roman', serif" },
-    { label:"Soft",    css:"'Trebuchet MS', 'Segoe UI', sans-serif" }
+    { label:"Modern",  css:"'Inter', system-ui, sans-serif",         weight:800 },
+    { label:"Poetic",  css:"'Playfair Display', Georgia, serif",      weight:700 },
+    { label:"Human",   css:"'Caveat', 'Segoe Script', cursive",       weight:700 },
+    { label:"Rounded", css:"'Quicksand', 'Trebuchet MS', sans-serif", weight:700 }
   ];
-  var te = { blocks:[], sel:null, font:0, natW:0, natH:0, dispW:0, dispH:0, drag:null, pinch:null };
+  var TE_COLORS = ["#ffffff","#222222","#ffd27d","#ffb3c1","#ff8b4a","#3f8fcf","#4f9d69","#c96f4c","#5bc0be"];
+  var te = { blocks:[], sel:null, font:0, color:"#ffffff", natW:0, natH:0, dispW:0, dispH:0, drag:null, pinch:null };
 
   function teOpen(){
     if(!pendingFile){ setAppMsg("Add a photo first.","err"); return; }
@@ -946,8 +952,9 @@
       var stage = $("teStage");
       stage.style.width = te.dispW+"px"; stage.style.height = te.dispH+"px";
       $("teImg").src = url;
-      te.blocks = []; te.sel = null; te.font = 0;
+      te.blocks = []; te.sel = null; te.font = 0; te.color = "#ffffff";
       $("teLayer").innerHTML = "";
+      teBuildColors(); teSetColor("#ffffff");
       teUpdateFontBtn(); teUpdateDelBtn();
       $("txtEditor").classList.remove("hide");
       document.body.style.overflow = "hidden";
@@ -966,10 +973,44 @@
     teCreateBlock(t);
   }
   function teCreateBlock(text){
-    var blk = { id:"b"+Date.now()+Math.floor(Math.random()*9999), text:text, fontIdx:te.font, xf:0.5, yf:0.5, sizef:0.08 };
+    var blk = { id:"b"+Date.now()+Math.floor(Math.random()*9999), text:text, fontIdx:te.font, color:te.color, box:0, xf:0.5, yf:0.5, sizef:0.08 };
     te.blocks.push(blk);
     teRenderBlock(blk);
     teSelect(blk.id);
+  }
+  /* ---- colour + box helpers (Stage 3) ---- */
+  function teLum(hex){var h=hex.replace('#','');if(h.length===3)h=h.split('').map(function(x){return x+x;}).join('');var r=parseInt(h.substr(0,2),16)/255,g=parseInt(h.substr(2,2),16)/255,b=parseInt(h.substr(4,2),16)/255;return 0.2126*r+0.7152*g+0.0722*b;}
+  function teRgba(hex,a){var h=hex.replace('#','');if(h.length===3)h=h.split('').map(function(x){return x+x;}).join('');return 'rgba('+parseInt(h.substr(0,2),16)+','+parseInt(h.substr(2,2),16)+','+parseInt(h.substr(4,2),16)+','+a+')';}
+  function teBoxColor(textHex){ return teLum(textHex) > 0.5 ? '#191919' : '#ffffff'; }
+  function teBuildColors(){
+    var strip = $("teColors"); if(strip.children.length) return;
+    TE_COLORS.forEach(function(c){
+      var b = document.createElement("button");
+      b.className = "te-swatch"; b.style.background = c; b.setAttribute("data-c",c);
+      b.addEventListener("click",function(){ teSetColor(c); });
+      strip.appendChild(b);
+    });
+  }
+  function teSetColor(c){
+    te.color = c;
+    Array.prototype.forEach.call($("teColors").children,function(s){ s.classList.toggle("sel", s.getAttribute("data-c")===c); });
+    var blk = teGet(te.sel); if(blk){ blk.color = c; teStyleBlock(blk); }
+  }
+  function teUpdateBoxBtn(){ var blk=teGet(te.sel); var n=blk?blk.box:0; $("teBoxBtn").textContent = ["▢ Box: off","▢ Box: soft","▢ Box: solid"][n]; }
+  function teCycleBox(){
+    var blk = teGet(te.sel); if(!blk) return;
+    blk.box = (blk.box+1)%3; teStyleBlock(blk); teUpdateBoxBtn();
+  }
+  function teStyleBlock(blk){
+    var el = document.getElementById(blk.id); if(!el) return;
+    el.style.color = blk.color;
+    el.style.fontWeight = TE_FONTS[blk.fontIdx].weight;
+    if(blk.box===0){
+      el.style.background = "radial-gradient(ellipse at center,rgba(0,0,0,.45),rgba(0,0,0,0) 70%)";
+    } else {
+      el.style.background = teRgba(teBoxColor(blk.color), blk.box===1 ? 0.45 : 0.92);
+      el.style.borderRadius = "10px";
+    }
   }
   /* Unity prompts (Stage 2) */
   var TE_PROMPTS = [
@@ -1018,12 +1059,14 @@
     el.style.top = (blk.yf*te.dispH)+"px";
     el.style.fontSize = (blk.sizef*te.dispW)+"px";
     el.style.fontFamily = TE_FONTS[blk.fontIdx].css;
+    teStyleBlock(blk);
   }
   function teSelect(id){
     te.sel = id;
     Array.prototype.forEach.call($("teLayer").children,function(c){ c.classList.toggle("sel", c.id===id); });
     teUpdateDelBtn();
-    var blk = teGet(id); if(blk){ te.font = blk.fontIdx; teUpdateFontBtn(); }
+    var blk = teGet(id);
+    if(blk){ te.font = blk.fontIdx; teUpdateFontBtn(); teSetColor(blk.color); teUpdateBoxBtn(); }
   }
   function teCycleFont(){
     te.font = (te.font+1) % TE_FONTS.length;
@@ -1102,23 +1145,39 @@
         te.blocks.forEach(function(blk){
           var fontPx = blk.sizef * cw;
           var lines = String(blk.text).split("\n");
-          ctx.font = "600 "+fontPx+"px "+TE_FONTS[blk.fontIdx].css;
+          var fw = TE_FONTS[blk.fontIdx].weight || 700;
+          ctx.font = fw+" "+fontPx+"px "+TE_FONTS[blk.fontIdx].css;
           ctx.textAlign="center"; ctx.textBaseline="middle";
           var lineH = fontPx*1.15;
           var totalH = lineH*lines.length;
           var maxW = 0;
           lines.forEach(function(L){ maxW=Math.max(maxW,ctx.measureText(L).width); });
           var cx = blk.xf*cw, cy = blk.yf*ch;
-          var gw = maxW/2 + fontPx*0.6, gh = totalH/2 + fontPx*0.45;
-          var grad = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(gw,gh)*1.15);
-          grad.addColorStop(0,"rgba(0,0,0,0.5)");
-          grad.addColorStop(0.7,"rgba(0,0,0,0.32)");
-          grad.addColorStop(1,"rgba(0,0,0,0)");
-          ctx.save(); ctx.fillStyle=grad;
-          ctx.fillRect(cx-gw*1.4, cy-gh*1.4, gw*2.8, gh*2.8); ctx.restore();
+          if(blk.box===0){
+            var gw = maxW/2 + fontPx*0.6, gh = totalH/2 + fontPx*0.45;
+            var grad = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(gw,gh)*1.15);
+            grad.addColorStop(0,"rgba(0,0,0,0.5)");
+            grad.addColorStop(0.7,"rgba(0,0,0,0.32)");
+            grad.addColorStop(1,"rgba(0,0,0,0)");
+            ctx.save(); ctx.fillStyle=grad;
+            ctx.fillRect(cx-gw*1.4, cy-gh*1.4, gw*2.8, gh*2.8); ctx.restore();
+          } else {
+            var padX = fontPx*0.45, padY = fontPx*0.28;
+            var bw = maxW + padX*2, bh = totalH + padY*2;
+            var bx = cx - bw/2, by = cy - bh/2, rad = fontPx*0.3;
+            ctx.save();
+            ctx.fillStyle = teRgba(teBoxColor(blk.color), blk.box===1 ? 0.45 : 0.92);
+            ctx.beginPath();
+            ctx.moveTo(bx+rad,by);
+            ctx.arcTo(bx+bw,by,bx+bw,by+bh,rad);
+            ctx.arcTo(bx+bw,by+bh,bx,by+bh,rad);
+            ctx.arcTo(bx,by+bh,bx,by,rad);
+            ctx.arcTo(bx,by,bx+bw,by,rad);
+            ctx.closePath(); ctx.fill(); ctx.restore();
+          }
           ctx.save();
-          ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=fontPx*0.35;
-          ctx.fillStyle="#fff";
+          if(blk.box===0){ ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=fontPx*0.35; }
+          ctx.fillStyle = blk.color || "#fff";
           var startY = cy - totalH/2 + lineH/2;
           lines.forEach(function(L,i){ ctx.fillText(L, cx, startY + i*lineH); });
           ctx.restore();
@@ -1138,13 +1197,17 @@
       <img id="teImg" alt="editing" />
       <div id="teLayer" class="te-layer"></div>
     </div>
-    <div class="te-toolbar" id="teToolbar">
-      <button class="te-btn" onclick="teCancel()">Cancel</button>
-      <button class="te-btn" onclick="teAddText()">+ Text</button>
-      <button class="te-btn" onclick="teOpenPrompts()">✨ Prompts</button>
-      <button class="te-btn" id="teFontBtn" onclick="teCycleFont()">Aa</button>
-      <button class="te-btn te-del hide" id="teDelBtn" onclick="teDeleteSelected()">Delete</button>
-      <button class="te-btn te-done" onclick="teDone()">Done</button>
+    <div class="te-bottom" id="teBottom">
+      <div class="te-colors" id="teColors"></div>
+      <div class="te-toolbar" id="teToolbar">
+        <button class="te-btn" onclick="teCancel()">Cancel</button>
+        <button class="te-btn" onclick="teAddText()">+ Text</button>
+        <button class="te-btn" onclick="teOpenPrompts()">✨ Prompts</button>
+        <button class="te-btn" id="teFontBtn" onclick="teCycleFont()">Aa</button>
+        <button class="te-btn" id="teBoxBtn" onclick="teCycleBox()">▢ Box</button>
+        <button class="te-btn te-del hide" id="teDelBtn" onclick="teDeleteSelected()">Delete</button>
+        <button class="te-btn te-done" onclick="teDone()">Done</button>
+      </div>
     </div>
     <div id="teInputBar" class="te-inputbar hide">
       <textarea id="teInput" rows="2" placeholder="Type here…"></textarea>
