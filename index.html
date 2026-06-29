@@ -133,6 +133,15 @@
   .section h3{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 2px 10px;font-weight:600}
   .person{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:11px 13px;margin-bottom:9px}
   .person .pname{flex:1;font-weight:600;font-size:.97rem}
+  .gridHead{font-size:.95rem;color:var(--muted);margin:18px 2px 10px;font-weight:600}
+  .photoGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+  .photoGrid .gphoto{position:relative;width:100%;aspect-ratio:1/1;overflow:hidden;border-radius:8px;background:var(--surface);cursor:pointer}
+  .photoGrid .gphoto img{width:100%;height:100%;object-fit:cover;display:block}
+  .gridEmpty{grid-column:1/-1;text-align:center;color:var(--muted);font-size:.9rem;padding:26px 8px;line-height:1.6}
+  .backRow{margin:2px 0 4px}
+  .backBtn{background:none;border:none;color:var(--amber);font-size:.95rem;cursor:pointer;padding:8px 4px;font-weight:600}
+  #userView .uname{font-weight:700;font-size:1.15rem;margin-bottom:2px}
+  #userView .usub{color:var(--muted);font-size:.85rem}
   .pbtn{font-family:inherit;font-weight:600;font-size:.85rem;border:none;border-radius:20px;padding:8px 16px;cursor:pointer}
   .pbtn.connect{color:#fff;background:linear-gradient(120deg,var(--coral),var(--amber))}
   .pbtn.accept{color:#08210f;background:var(--leaf)}
@@ -291,6 +300,19 @@
       <button class="profSave" onclick="saveProfileName()">Save name</button>
       <div class="appMsg" id="profileMsg"></div>
     </div>
+    <h3 class="gridHead">Your photos</h3>
+    <div id="profileGrid" class="photoGrid"><div class="gridEmpty">Loading…</div></div>
+  </div>
+
+  <div id="userView" class="hide">
+    <div class="backRow"><button class="backBtn" onclick="switchView('people')">← Back to people</button></div>
+    <div class="profileCard">
+      <div class="avatar big" id="userAvatar">E</div>
+      <div class="uname" id="userName">Someone</div>
+      <div class="usub" id="userSub"></div>
+    </div>
+    <h3 class="gridHead">Photos</h3>
+    <div id="userGrid" class="photoGrid"><div class="gridEmpty">Loading…</div></div>
   </div>
 </div>
 
@@ -409,6 +431,7 @@
     $("feedView").classList.toggle("hide",v!=="feed");
     $("peopleView").classList.toggle("hide",v!=="people");
     $("profileView").classList.toggle("hide",v!=="profile");
+    var uv=$("userView"); if(uv) uv.classList.add("hide");
     if(v==="people") loadPeople();
     if(v==="profile") loadProfile();
   }
@@ -652,11 +675,11 @@
       if(requests.length){b.textContent=requests.length;b.classList.remove("hide");}else b.classList.add("hide");
     }catch(err){setPeopleMsg("Couldn't load people: "+(err.message||err),"err");}
   }
-  function personRow(p,right){var av=p.avatar_url?'<div class="avatar" style="background-image:url(\''+p.avatar_url+'\');background-size:cover;background-position:center"></div>':'<div class="avatar">'+initialOf(p.full_name)+'</div>';return '<div class="person">'+av+'<div class="pname">'+escapeHtml(p.full_name||"Someone")+'</div>'+right+'</div>';}
+  function personRow(p,right,click){var av=p.avatar_url?'<div class="avatar" style="background-image:url(\''+p.avatar_url+'\');background-size:cover;background-position:center"></div>':'<div class="avatar">'+initialOf(p.full_name)+'</div>';var attr=click?(' onclick="'+click+'" style="cursor:pointer"'):'';return '<div class="person"'+attr+'>'+av+'<div class="pname">'+escapeHtml(p.full_name||"Someone")+'</div>'+right+'</div>';}
   function renderPeople(requests,connected,discover){
     let rs="";if(requests.length){rs='<h3>Requests &middot; '+requests.length+'</h3>'+requests.map(function(x){return personRow(x.p,'<button class="pbtn accept" onclick="acceptRequest(\''+x.c.id+'\')">Accept</button>');}).join("");}
     $("requestsSection").innerHTML=rs;
-    let cs="";if(connected.length){cs='<h3>Your connections &middot; '+connected.length+'</h3>'+connected.map(function(x){return personRow(x.p,'<span class="pill linked">Connected</span>');}).join("");}
+    let cs="";if(connected.length){cs='<h3>Your connections &middot; '+connected.length+'</h3>'+connected.map(function(x){return personRow(x.p,'<span class="pill linked">View ›</span>',"viewUser('"+x.p.id+"')");}).join("");}
     $("connectionsSection").innerHTML=cs;
     let ds='<h3>Discover people</h3>';
     if(!discover.length){ds+='<div class="empty">No one else here yet.<br>Invite a friend to join Earthafying. 🌍</div>';}
@@ -672,7 +695,51 @@
   $("cameraInput").addEventListener("change",onFilePicked);
 
   function setProfileMsg(t,cls){const e=$("profileMsg");if(e){e.textContent=t;e.className="appMsg"+(cls?" "+cls:"");}}
-  function loadProfile(){ if(!currentUser)return; $("profileName").value = myProfile.full_name || myName(); applyMyAvatar(); setProfileMsg(""); }
+  function loadProfile(){ if(!currentUser)return; $("profileName").value = myProfile.full_name || myName(); applyMyAvatar(); setProfileMsg(""); loadMyPhotos(); }
+  function renderGrid(el,posts){
+    if(!el)return;
+    var withImg=(posts||[]).filter(function(p){return p.image_url;});
+    if(!withImg.length){ el.innerHTML='<div class="gridEmpty">No photos shared yet. 🌱</div>'; return; }
+    el.innerHTML=withImg.map(function(p){
+      return '<div class="gphoto"><img src="'+escapeHtml(p.image_url)+'" alt="moment" loading="lazy" onclick="openPhoto(this.src)" /></div>';
+    }).join("");
+  }
+  async function loadMyPhotos(){
+    var el=$("profileGrid"); if(!el||!currentUser)return;
+    el.innerHTML='<div class="gridEmpty">Loading…</div>';
+    try{
+      var res=await sb.from("posts").select("id,image_url,created_at").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(120);
+      if(res.error)throw res.error;
+      renderGrid(el,res.data||[]);
+    }catch(err){ el.innerHTML='<div class="gridEmpty">Couldn\'t load your photos.</div>'; }
+  }
+  async function viewUser(id){
+    if(!id||!currentUser)return;
+    $("feedView").classList.add("hide");
+    $("peopleView").classList.add("hide");
+    $("profileView").classList.add("hide");
+    $("userView").classList.remove("hide");
+    $("navFeed").classList.remove("active");
+    $("navPeople").classList.remove("active");
+    $("navProfile").classList.remove("active");
+    setAvatarEl($("userAvatar"),null,"E");
+    $("userName").textContent="…";
+    $("userSub").textContent="";
+    window.scrollTo(0,0);
+    var el=$("userGrid"); el.innerHTML='<div class="gridEmpty">Loading…</div>';
+    try{
+      var pr=await sb.from("profiles").select("full_name,avatar_url").eq("id",id).single();
+      var nm=(pr.data&&pr.data.full_name)||"Someone";
+      var av=(pr.data&&pr.data.avatar_url)||null;
+      setAvatarEl($("userAvatar"),av,nm);
+      $("userName").textContent=nm;
+      var res=await sb.from("posts").select("id,image_url,created_at").eq("user_id",id).order("created_at",{ascending:false}).limit(120);
+      if(res.error)throw res.error;
+      var n=(res.data||[]).filter(function(p){return p.image_url;}).length;
+      $("userSub").textContent=n?(n+(n===1?" photo":" photos")):"";
+      renderGrid(el,res.data||[]);
+    }catch(err){ el.innerHTML='<div class="gridEmpty">Couldn\'t load photos.</div>'; }
+  }
   async function saveProfileName(){
     var v=$("profileName").value.trim();
     if(!v){setProfileMsg("Please enter a name.","err");return;}
