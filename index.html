@@ -142,6 +142,23 @@
   .backBtn{background:none;border:none;color:var(--amber);font-size:.95rem;cursor:pointer;padding:8px 4px;font-weight:600}
   #userView .uname{font-weight:700;font-size:1.15rem;margin-bottom:2px}
   #userView .usub{color:var(--muted);font-size:.85rem}
+  .agreeLabel{display:flex;align-items:flex-start;gap:9px;font-size:.86rem;line-height:1.45;color:var(--muted);cursor:pointer;margin:4px 0 6px}
+  .agreeLabel input{margin-top:2px;flex:none;width:18px;height:18px;accent-color:var(--amber)}
+  .agreeLabel a{color:var(--amber);text-decoration:underline}
+  .termsOverlay{position:fixed;inset:0;background:rgba(6,5,13,.96);z-index:1200;display:flex;align-items:center;justify-content:center;padding:14px}
+  .termsOverlay.hide{display:none}
+  .termsSheet{background:var(--surface);border:1px solid var(--border);border-radius:18px;max-width:560px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
+  .termsHead{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border)}
+  .termsHead h2{font-size:1.08rem;margin:0;color:var(--text)}
+  .termsClose{background:none;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:4px 8px}
+  .termsBody{padding:14px 18px;overflow-y:auto;line-height:1.6;font-size:.92rem;color:var(--text)}
+  .termsBody h3{font-size:.98rem;margin:16px 0 6px;color:var(--amber)}
+  .termsBody p{margin:0 0 10px}
+  .termsBody ul{margin:0 0 12px;padding-left:18px}
+  .termsBody li{margin:5px 0}
+  .termsBody .tnote{color:var(--muted);font-size:.82rem;font-style:italic}
+  .termsFoot{padding:13px 18px;border-top:1px solid var(--border)}
+  .termsAgree{width:100%;border:none;border-radius:999px;padding:13px;font-weight:700;font-size:1rem;cursor:pointer;background:linear-gradient(135deg,var(--amber),var(--coral));color:#2a1c12}
   .pbtn{font-family:inherit;font-weight:600;font-size:.85rem;border:none;border-radius:20px;padding:8px 16px;cursor:pointer}
   .pbtn.connect{color:#fff;background:linear-gradient(120deg,var(--coral),var(--amber))}
   .pbtn.accept{color:#08210f;background:var(--leaf)}
@@ -213,8 +230,58 @@
       <input id="dob" type="date" />
       <div class="hint">You must be 13 or older to join Earthafying.</div>
     </div>
+    <div id="agreeRow" class="hide">
+      <label class="agreeLabel"><input type="checkbox" id="agreeBox" /> <span>I'm 13 or older and I agree to Earthafying's <a href="#" onclick="openTerms(event)">Community Guidelines &amp; Terms</a>.</span></label>
+    </div>
     <button class="go" id="goBtn" onclick="submitAuth()">Log in</button>
     <div class="msg" id="msg" aria-live="polite"></div>
+  </div>
+</div>
+
+<div id="termsOverlay" class="termsOverlay hide">
+  <div class="termsSheet">
+    <div class="termsHead">
+      <h2>Welcome to Earthafying 🌍</h2>
+      <button class="termsClose" onclick="closeTerms()" aria-label="Close">&#10005;</button>
+    </div>
+    <div class="termsBody">
+      <p>Earthafying exists to bring people together across cultures and borders — one shared moment at a time. We're all from here. To keep this a kind, safe place, everyone agrees to a few simple things.</p>
+
+      <h3>Community Guidelines</h3>
+      <ul>
+        <li><b>Be kind.</b> Treat everyone with respect, whoever and wherever they are.</li>
+        <li><b>Everyone here is 13 or older.</b> If you're under 13, you can't use Earthafying yet.</li>
+        <li><b>Share your own world.</b> Post your own photos and moments — not other people's private information.</li>
+        <li><b>Keep it safe for all ages.</b> No nudity, sexual content, or anything that sexualises a person — and absolutely nothing that sexualises or endangers a minor.</li>
+        <li><b>No harm.</b> No bullying, harassment, hate, threats, violence, or content that encourages self-harm.</li>
+        <li><b>No spam, scams, or illegal content.</b></li>
+        <li><b>Adults and young people.</b> Adults must never use Earthafying to contact or pressure a minor inappropriately. This is taken extremely seriously.</li>
+        <li><b>Speak up.</b> If something worries you, look out for each other and report it. We review concerns with human care.</li>
+      </ul>
+      <p>Breaking these guidelines can lead to content being removed or an account being closed.</p>
+
+      <h3>Terms (the plain version)</h3>
+      <ul>
+        <li>You're responsible for what you post and how you behave here.</li>
+        <li>You keep ownership of your photos. By posting, you give Earthafying permission to display them inside the app so others can see your moment.</li>
+        <li>Earthafying is offered free, as-is, during this early phase — things may change or break as it grows.</li>
+        <li>We may update these guidelines and terms. Continuing to use Earthafying means you accept the latest version.</li>
+      </ul>
+
+      <h3>Your privacy (short summary)</h3>
+      <ul>
+        <li>We collect your name, email, date of birth, and the moments you choose to post.</li>
+        <li>We use this only to run Earthafying — your account, the feed, and connections.</li>
+        <li>We do <b>not</b> sell your data, and Earthafying shows <b>no ads</b>.</li>
+        <li>Your data is stored securely through our service provider.</li>
+        <li>You can ask to delete your account and your data at any time.</li>
+      </ul>
+
+      <p class="tnote">This is an early version written in plain language. Before Earthafying opens to the public, a full, professionally reviewed policy will be provided.</p>
+    </div>
+    <div class="termsFoot">
+      <button class="termsAgree" onclick="agreeTerms()">Agree &amp; continue</button>
+    </div>
   </div>
 </div>
 
@@ -340,9 +407,14 @@
     $("tabSignup").classList.toggle("active",m==="signup");
     $("nameRow").classList.toggle("hide",m!=="signup");
     $("dobRow").classList.toggle("hide",m!=="signup");
+    $("agreeRow").classList.toggle("hide",m!=="signup");
+    var ab=$("agreeBox"); if(ab&&m!=="signup") ab.checked=false;
     $("goBtn").textContent=m==="signup"?"Create my account":"Log in";
     setMsg("");
   }
+  function openTerms(e){ if(e&&e.preventDefault)e.preventDefault(); $("termsOverlay").classList.remove("hide"); document.body.style.overflow="hidden"; }
+  function closeTerms(){ $("termsOverlay").classList.add("hide"); document.body.style.overflow=""; }
+  function agreeTerms(){ var b=$("agreeBox"); if(b) b.checked=true; closeTerms(); }
   function setMsg(t,cls){const e=$("msg");e.textContent=t;e.className="msg"+(cls?" "+cls:"");}
   function setAppMsg(t,cls){const e=$("appMsg");e.textContent=t;e.className="appMsg"+(cls?" "+cls:"");}
   function setPeopleMsg(t,cls){const e=$("peopleMsg");e.textContent=t;e.className="appMsg"+(cls?" "+cls:"");}
@@ -390,8 +462,9 @@
         const age=ageFrom(dob);
         if(age===null){$("goBtn").disabled=false;return setMsg("Add your date of birth.","err");}
         if(age<13){$("goBtn").disabled=false;return setMsg("You need to be 13 or older to join.","err");}
+        if(!$("agreeBox").checked){$("goBtn").disabled=false;return setMsg("Please agree to the Community Guidelines & Terms to join.","err");}
         setMsg("Creating your account…");
-        const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,dob:dob}}});
+        const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,dob:dob,agreed_terms:true,agreed_at:new Date().toISOString(),terms_version:"1.0"}}});
         if(error)throw error;
         if(data.session) await enterApp(data.user);
         else {setMsg("Account created! Check your email to confirm, then log in.","ok");setMode("login");}
