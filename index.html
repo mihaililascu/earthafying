@@ -42,6 +42,7 @@
   #dobDay{flex:.7} #dobMonth{flex:1.5} #dobYear{flex:1}
   /* ===== Photo text editor (Stage 1) ===== */
   .editImg{position:absolute;left:10px;bottom:10px;background:rgba(0,0,0,.55);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:8px 14px;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
+  .editImg2{left:auto;right:10px}
   .txtEditor{position:fixed;inset:0;z-index:200;background:#05070a;display:flex;flex-direction:column;align-items:center;justify-content:center}
   .te-stage{position:relative;touch-action:none;overflow:hidden;border-radius:6px;background:#000}
   .te-stage img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
@@ -54,6 +55,9 @@
   .te-hint{position:fixed;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;color:rgba(255,255,255,.7);font-size:.78rem;pointer-events:none;padding:0 16px}
   .te-bottom{position:fixed;left:0;right:0;bottom:0;background:linear-gradient(to top,rgba(0,0,0,.92),rgba(0,0,0,.55) 70%,rgba(0,0,0,0));padding-bottom:calc(12px + env(safe-area-inset-bottom))}
   .te-colors{display:flex;gap:10px;overflow-x:auto;padding:12px 14px 4px;-webkit-overflow-scrolling:touch}
+  .te-filters{display:flex;gap:8px;overflow-x:auto;padding:12px 14px 6px;-webkit-overflow-scrolling:touch}
+  .te-fchip{flex:0 0 auto;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.25);border-radius:18px;padding:9px 15px;font-family:inherit;font-size:.86rem;font-weight:600;cursor:pointer;white-space:nowrap}
+  .te-fchip.sel{background:linear-gradient(120deg,var(--coral),var(--amber));border:none}
   .te-swatch{flex:0 0 auto;width:30px;height:30px;border-radius:50%;border:2px solid rgba(255,255,255,.45);cursor:pointer;padding:0}
   .te-swatch.sel{border-color:#fff;box-shadow:0 0 0 2px var(--amber)}
   .te-toolbar{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:8px 10px 4px}
@@ -361,6 +365,7 @@
         <img id="previewImg" alt="preview" />
         <button class="removeImg" onclick="clearPhoto()">&times;</button>
         <button class="editImg" onclick="teOpen()">✏️ Add text</button>
+        <button class="editImg editImg2" onclick="teOpen(true)">🎨 Filter</button>
       </div>
       <div class="row">
         <div class="leftrow">
@@ -937,9 +942,16 @@
     { label:"Rounded", css:"'Quicksand', 'Trebuchet MS', sans-serif", weight:700 }
   ];
   var TE_COLORS = ["#ffffff","#222222","#ffd27d","#ffb3c1","#ff8b4a","#3f8fcf","#4f9d69","#c96f4c","#5bc0be"];
-  var te = { blocks:[], sel:null, font:0, color:"#ffffff", natW:0, natH:0, dispW:0, dispH:0, drag:null, pinch:null };
+  var TE_FILTERS = [
+    { key:"none",     label:"Original", css:"none" },
+    { key:"sunset",   label:"Sunset Glow", css:"saturate(1.3) sepia(0.28) brightness(1.05) contrast(1.02)" },
+    { key:"humanity", label:"Humanity", css:"contrast(0.9) brightness(1.07) saturate(0.97)" },
+    { key:"earth",    label:"Earth", css:"saturate(1.2) contrast(1.05) brightness(0.98) hue-rotate(-6deg)" },
+    { key:"mono",     label:"Classic Peace", css:"grayscale(1) contrast(1.06) brightness(1.02)" }
+  ];
+  var te = { blocks:[], sel:null, font:0, color:"#ffffff", filter:"none", natW:0, natH:0, dispW:0, dispH:0, drag:null, pinch:null };
 
-  function teOpen(){
+  function teOpen(autoFilter){
     if(!pendingFile){ setAppMsg("Add a photo first.","err"); return; }
     var url = URL.createObjectURL(pendingFile);
     var img = new Image();
@@ -952,14 +964,38 @@
       var stage = $("teStage");
       stage.style.width = te.dispW+"px"; stage.style.height = te.dispH+"px";
       $("teImg").src = url;
-      te.blocks = []; te.sel = null; te.font = 0; te.color = "#ffffff";
+      te.blocks = []; te.sel = null; te.font = 0; te.color = "#ffffff"; te.filter = "none";
       $("teLayer").innerHTML = "";
+      $("teImg").style.filter = "none";
       teBuildColors(); teSetColor("#ffffff");
+      teBuildFilters(); teSetFilter("none");
+      teToggleFilters(!!autoFilter);
       teUpdateFontBtn(); teUpdateDelBtn();
       $("txtEditor").classList.remove("hide");
       document.body.style.overflow = "hidden";
     };
     img.src = url;
+  }
+  /* ---- filters (One World palette) ---- */
+  function teFilterCss(key){ for(var i=0;i<TE_FILTERS.length;i++) if(TE_FILTERS[i].key===key) return TE_FILTERS[i].css; return "none"; }
+  function teBuildFilters(){
+    var row = $("teFilters"); if(row.children.length) return;
+    TE_FILTERS.forEach(function(f){
+      var b = document.createElement("button");
+      b.className = "te-fchip"; b.textContent = f.label; b.setAttribute("data-f",f.key);
+      b.addEventListener("click",function(){ teSetFilter(f.key); });
+      row.appendChild(b);
+    });
+  }
+  function teSetFilter(key){
+    te.filter = key;
+    $("teImg").style.filter = teFilterCss(key);
+    Array.prototype.forEach.call($("teFilters").children,function(c){ c.classList.toggle("sel", c.getAttribute("data-f")===key); });
+  }
+  function teToggleFilters(force){
+    var row = $("teFilters");
+    var show = (typeof force==="boolean") ? force : row.classList.contains("hide");
+    row.classList.toggle("hide", !show);
   }
   function teUpdateFontBtn(){ var b=$("teFontBtn"); b.style.fontFamily = TE_FONTS[te.font].css; b.textContent = "Aa · "+TE_FONTS[te.font].label; }
   function teUpdateDelBtn(){ $("teDelBtn").classList.toggle("hide", !te.sel); }
@@ -1141,7 +1177,9 @@
       var ctx = canvas.getContext("2d");
       var img = new Image();
       img.onload = function(){
+        try{ ctx.filter = teFilterCss(te.filter); }catch(_){}
         ctx.drawImage(img,0,0,cw,ch);
+        try{ ctx.filter = "none"; }catch(_){}
         te.blocks.forEach(function(blk){
           var fontPx = blk.sizef * cw;
           var lines = String(blk.text).split("\n");
@@ -1198,11 +1236,13 @@
       <div id="teLayer" class="te-layer"></div>
     </div>
     <div class="te-bottom" id="teBottom">
+      <div class="te-filters hide" id="teFilters"></div>
       <div class="te-colors" id="teColors"></div>
       <div class="te-toolbar" id="teToolbar">
         <button class="te-btn" onclick="teCancel()">Cancel</button>
         <button class="te-btn" onclick="teAddText()">+ Text</button>
         <button class="te-btn" onclick="teOpenPrompts()">✨ Prompts</button>
+        <button class="te-btn" id="teFilterBtn" onclick="teToggleFilters()">🎨 Filters</button>
         <button class="te-btn" id="teFontBtn" onclick="teCycleFont()">Aa</button>
         <button class="te-btn" id="teBoxBtn" onclick="teCycleBox()">▢ Box</button>
         <button class="te-btn te-del hide" id="teDelBtn" onclick="teDeleteSelected()">Delete</button>
