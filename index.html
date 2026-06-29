@@ -48,8 +48,7 @@
   .te-stage img{display:block;width:100%;height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none}
   .te-layer{position:absolute;inset:0}
   .te-block{position:absolute;color:#fff;font-weight:600;line-height:1.15;white-space:pre;text-align:center;padding:.15em .35em;cursor:move;user-select:none;
-    text-shadow:0 1px 10px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.75);
-    background:radial-gradient(ellipse at center,rgba(0,0,0,.45),rgba(0,0,0,0) 70%);
+    text-shadow:0 1px 2px rgba(0,0,0,.45);
     transform:translate(-50%,-50%);touch-action:none}
   .te-block.sel{outline:1.5px dashed rgba(255,255,255,.7);outline-offset:4px}
   .te-hint{position:fixed;top:calc(12px + env(safe-area-inset-top));left:0;right:0;text-align:center;color:rgba(255,255,255,.7);font-size:.78rem;pointer-events:none;padding:0 16px}
@@ -1042,7 +1041,7 @@
     el.style.color = blk.color;
     el.style.fontWeight = TE_FONTS[blk.fontIdx].weight;
     if(blk.box===0){
-      el.style.background = "radial-gradient(ellipse at center,rgba(0,0,0,.45),rgba(0,0,0,0) 70%)";
+      el.style.background = "transparent";
     } else {
       el.style.background = teRgba(teBoxColor(blk.color), blk.box===1 ? 0.45 : 0.92);
       el.style.borderRadius = "10px";
@@ -1191,15 +1190,7 @@
           var maxW = 0;
           lines.forEach(function(L){ maxW=Math.max(maxW,ctx.measureText(L).width); });
           var cx = blk.xf*cw, cy = blk.yf*ch;
-          if(blk.box===0){
-            var gw = maxW/2 + fontPx*0.6, gh = totalH/2 + fontPx*0.45;
-            var grad = ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(gw,gh)*1.15);
-            grad.addColorStop(0,"rgba(0,0,0,0.5)");
-            grad.addColorStop(0.7,"rgba(0,0,0,0.32)");
-            grad.addColorStop(1,"rgba(0,0,0,0)");
-            ctx.save(); ctx.fillStyle=grad;
-            ctx.fillRect(cx-gw*1.4, cy-gh*1.4, gw*2.8, gh*2.8); ctx.restore();
-          } else {
+          if(blk.box!==0){
             var padX = fontPx*0.45, padY = fontPx*0.28;
             var bw = maxW + padX*2, bh = totalH + padY*2;
             var bx = cx - bw/2, by = cy - bh/2, rad = fontPx*0.3;
@@ -1214,7 +1205,7 @@
             ctx.closePath(); ctx.fill(); ctx.restore();
           }
           ctx.save();
-          if(blk.box===0){ ctx.shadowColor="rgba(0,0,0,0.6)"; ctx.shadowBlur=fontPx*0.35; }
+          if(blk.box===0){ ctx.shadowColor="rgba(0,0,0,0.5)"; ctx.shadowBlur=fontPx*0.1; ctx.shadowOffsetY=fontPx*0.03; }
           ctx.fillStyle = blk.color || "#fff";
           var startY = cy - totalH/2 + lineH/2;
           lines.forEach(function(L,i){ ctx.fillText(L, cx, startY + i*lineH); });
