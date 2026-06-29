@@ -36,6 +36,10 @@
   input,textarea{width:100%;font-family:inherit;font-size:1rem;padding:13px 15px;border-radius:12px;border:2px solid transparent;background:#fbf7ec;color:#1a1f12;outline:none}
   input:focus,textarea:focus{border-color:var(--amber)}
   .hint{font-size:.74rem;color:var(--muted);margin-top:6px}
+  .dobGrid{display:flex;gap:8px}
+  .dobGrid select{font-family:inherit;font-size:1rem;padding:13px 8px;border-radius:12px;border:2px solid transparent;background:#fbf7ec;color:#1a1f12;outline:none;-webkit-appearance:none;appearance:none;text-align:center;text-align-last:center}
+  .dobGrid select:focus{border-color:var(--amber)}
+  #dobDay{flex:.7} #dobMonth{flex:1.5} #dobYear{flex:1}
   button.go{width:100%;margin-top:20px;font-family:inherit;font-weight:600;font-size:1.02rem;padding:14px;border-radius:12px;border:none;color:#fff;background:linear-gradient(120deg,var(--coral),var(--amber));cursor:pointer}
   button.go:disabled{opacity:.6}
   .msg{margin-top:16px;font-size:.9rem;min-height:1.2em;text-align:center}
@@ -226,8 +230,12 @@
     <label for="password">Password</label>
     <input id="password" type="password" placeholder="At least 6 characters" autocomplete="current-password" />
     <div id="dobRow" class="hide">
-      <label for="dob">Your date of birth</label>
-      <input id="dob" type="date" />
+      <label>Your date of birth</label>
+      <div class="dobGrid">
+        <select id="dobDay" aria-label="Day"></select>
+        <select id="dobMonth" aria-label="Month"></select>
+        <select id="dobYear" aria-label="Year"></select>
+      </div>
       <div class="hint">You must be 13 or older to join Earthafying.</div>
     </div>
     <div id="agreeRow" class="hide">
@@ -420,6 +428,29 @@
   function setPeopleMsg(t,cls){const e=$("peopleMsg");e.textContent=t;e.className="appMsg"+(cls?" "+cls:"");}
   const validEmail=(v)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
   function ageFrom(d){var b=new Date(d);if(isNaN(b))return null;var t=new Date();var a=t.getFullYear()-b.getFullYear();var m=t.getMonth()-b.getMonth();if(m<0||(m===0&&t.getDate()<b.getDate()))a--;return a;}
+  var DOB_MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  function buildDobSelects(){
+    var dS=$("dobDay"),mS=$("dobMonth"),yS=$("dobYear");if(!dS||!mS||!yS)return;
+    var ph=function(t){return '<option value="" disabled selected hidden>'+t+'</option>';};
+    var dh=ph("Day");for(var i=1;i<=31;i++)dh+='<option value="'+i+'">'+i+'</option>';dS.innerHTML=dh;
+    var mh=ph("Month");for(var j=0;j<12;j++)mh+='<option value="'+j+'">'+DOB_MONTHS[j]+'</option>';mS.innerHTML=mh;
+    var ty=new Date().getFullYear(),yh=ph("Year");for(var k=ty;k>=ty-120;k--)yh+='<option value="'+k+'">'+k+'</option>';yS.innerHTML=yh;
+    function rebuildDays(){
+      var mv=mS.value;if(mv===""||mv==null)return;
+      var yv=yS.value;var max=new Date(yv?+yv:2024,(+mv)+1,0).getDate();
+      var prev=dS.value;var html=ph("Day");
+      for(var n=1;n<=max;n++)html+='<option value="'+n+'">'+n+'</option>';
+      dS.innerHTML=html;if(prev&&+prev<=max)dS.value=prev;
+    }
+    mS.addEventListener("change",rebuildDays);yS.addEventListener("change",rebuildDays);
+  }
+  function getDob(){
+    var d=$("dobDay").value,m=$("dobMonth").value,y=$("dobYear").value;
+    if(d===""||m===""||y==="")return"";
+    var mm=String((+m)+1).padStart(2,"0"),dd=String(+d).padStart(2,"0");
+    return y+"-"+mm+"-"+dd;
+  }
+  buildDobSelects();
   function escapeHtml(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function firstName(n){return (n||"friend").split(" ")[0];}
   function initialOf(n){return (firstName(n)[0]||"E").toUpperCase();}
@@ -457,7 +488,7 @@
     $("goBtn").disabled=true;
     try{
       if(mode==="signup"){
-        const name=$("name").value.trim(),dob=$("dob").value;
+        const name=$("name").value.trim(),dob=getDob();
         if(!name){$("goBtn").disabled=false;return setMsg("Add your name.","err");}
         const age=ageFrom(dob);
         if(age===null){$("goBtn").disabled=false;return setMsg("Add your date of birth.","err");}
