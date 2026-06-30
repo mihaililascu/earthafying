@@ -404,7 +404,7 @@
 
   <div id="profileView" class="hide">
     <div class="profileCard">
-      <div class="avatar big" id="profileAvatar">M</div>
+      <div class="avatar big" id="profileAvatar" onclick="openAvatar(this)">M</div>
       <button class="profPhotoBtn" onclick="openPhotoSheet('avatar')">📷 Change photo</button>
       <label class="profLabel" for="profileName">Your name</label>
       <input id="profileName" class="profInput" maxlength="40" placeholder="Your name" />
@@ -418,7 +418,7 @@
   <div id="userView" class="hide">
     <div class="backRow"><button class="backBtn" onclick="switchView('people')">← Back to people</button></div>
     <div class="profileCard">
-      <div class="avatar big" id="userAvatar">E</div>
+      <div class="avatar big" id="userAvatar" onclick="openAvatar(this)">E</div>
       <div class="uname" id="userName">Someone</div>
       <div class="usub" id="userSub"></div>
     </div>
@@ -441,7 +441,8 @@
   var myProfile = { full_name:null, avatar_url:null };
   var photoSheetMode = "post";
   function myName(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.full_name)||"friend"; }
-  function setAvatarEl(el,url,name){ if(!el)return; if(url){ el.textContent=""; el.style.backgroundImage="url('"+url+"')"; el.style.backgroundSize="cover"; el.style.backgroundPosition="center"; } else { el.style.backgroundImage=""; el.style.background=avatarBg(name); el.textContent=initialOf(name); } }
+  function setAvatarEl(el,url,name){ if(!el)return; if(url){ el.textContent=""; el.style.backgroundImage="url('"+url+"')"; el.style.backgroundSize="cover"; el.style.backgroundPosition="center"; el.style.cursor="zoom-in"; } else { el.style.backgroundImage=""; el.style.background=avatarBg(name); el.textContent=initialOf(name); el.style.cursor="default"; } }
+  function openAvatar(el){ if(!el)return; var bg=el.style.backgroundImage||""; var m=bg.match(/url\(["']?(.*?)["']?\)/); if(m&&m[1]) openPhoto(m[1]); }
   function avatarHue(name){ var ch=(initialOf(name)||"E").charCodeAt(0); return (ch*37)%360; }
   function avatarBg(name){ var h=avatarHue(name); return "linear-gradient(135deg,hsl("+h+",55%,58%),hsl("+h+",55%,44%))"; }
   function avatarTag(name,cls){ return '<div class="avatar'+(cls?" "+cls:"")+'" style="background:'+avatarBg(name)+'">'+initialOf(name)+'</div>'; }
