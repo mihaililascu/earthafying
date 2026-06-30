@@ -156,7 +156,7 @@
   .actions{display:flex;gap:18px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
   .act{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:2px 0}
   .act .ic{font-size:1.05rem;line-height:1;display:inline-flex;align-items:center}
-  .act svg.ic{width:20px;height:20px;display:block}
+  .act svg.ic{width:28px;height:28px;display:block}
   .act.like.on{color:var(--coral)}
   .comments{margin-top:12px}
   .comment{font-size:.92rem;line-height:1.5;padding:8px 0;border-top:1px solid var(--border)}
@@ -624,11 +624,19 @@
     const liked=!!state.liked[id];
     const lc=state.likeCount[id]||0;
     const cc=(state.comments[id]||[]).length;
-    const heart = liked
-      ? '<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.3C.6 8.9 2 5.4 5.2 5c1.9-.2 3.6.8 4.8 2.3C11.2 5.8 12.9 4.8 14.8 5 18 5.4 19.4 8.9 18 11.7 15.5 16.4 12 21 12 21z"/></svg>'
-      : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S5 16.2 2.8 11.9C1.5 9.4 2.7 6.3 5.4 6c1.8-.2 3.4.8 4.5 2.2C11 6.8 12.6 5.8 14.4 6c2.7.3 3.9 3.4 2.6 5.9C15.5 16.2 12 20.5 12 20.5z"/></svg>';
-    const bubble = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>';
-    const share = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>';
+    const heartFill = liked ? '#ffffff' : '#d6d6d6';
+    const heart = '<svg class="ic" viewBox="0 0 24 24">'+
+      '<path d="M5 3h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4 4v-4H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" fill="#9e3b48"/>'+
+      '<path d="M12 12.8c-.2-.1-3-1.9-4-3.5-.7-1.1-.1-2.5 1.2-2.6.8-.1 1.5.3 2 .9.5-.6 1.2-1 2-.9 1.3.1 1.9 1.5 1.2 2.6-1 1.6-3.2 3.4-4.4 3.5z" fill="'+heartFill+'"/>'+
+      '</svg>';
+    const bubble = '<svg class="ic" viewBox="0 0 24 24">'+
+      '<circle cx="12" cy="12" r="11" fill="url(#eaCommentGrad)"/>'+
+      '<path d="M17.5 11.2a5.5 5.5 0 0 1-6 5.4 5.8 5.8 0 0 1-2.2-.5L6.5 17l.9-2.4a5.4 5.4 0 0 1-1-3.1A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 5.5 5.2z" fill="none" stroke="#14181c" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>'+
+      '</svg>';
+    const share = '<svg class="ic" viewBox="0 0 24 24">'+
+      '<circle cx="12" cy="12" r="11" fill="#c0223a"/>'+
+      '<path d="M13 7.5V5l5 4.2-5 4.3v-2.6c-3 0-5 1.1-6.2 3.6.1-3.8 2.7-6.4 6.2-7z" fill="#f4f4f4"/>'+
+      '</svg>';
     return '<button class="act like'+(liked?' on':'')+'" onclick="toggleLike(\''+id+'\')">'+heart+' '+lc+'</button>'+
       '<button class="act" onclick="toggleComments(\''+id+'\')">'+bubble+' '+cc+'</button>'+
       '<button class="act" onclick="sharePost(\''+id+'\')">'+share+'</button>';
@@ -1238,6 +1246,11 @@
 
   (async function(){const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user);})();
 </script>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="eaCommentGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2bbf86"/><stop offset="1" stop-color="#1f86d6"/>
+    </linearGradient>
+  </defs></svg>
   <div id="txtEditor" class="txtEditor hide">
     <div class="te-hint">+ Text to add words · drag to move · pinch with two fingers to resize</div>
     <div class="te-stage" id="teStage">
