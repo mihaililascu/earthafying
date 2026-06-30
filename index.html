@@ -108,7 +108,7 @@
   #photoSheet .ps-opt:active{filter:brightness(1.07)}
   #photoSheet .ps-cancel{font-family:inherit;font-size:1rem;font-weight:600;color:var(--text);background:transparent;border:1px solid var(--border);border-radius:14px;padding:13px;cursor:pointer;margin-top:2px}
   .compose .who{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  .avatar{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:700;color:#2a1c12;background:linear-gradient(135deg,var(--amber),var(--coral))}
+  .avatar{width:38px;height:38px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--amber),var(--coral));text-shadow:1px 1px 0 rgba(0,0,0,.16),2px 2px 0 rgba(0,0,0,.14),3px 3px 0 rgba(0,0,0,.11),4px 4px 0 rgba(0,0,0,.08),5px 5px 7px rgba(0,0,0,.25);overflow:hidden}
   .avatar.big{width:104px;height:104px;font-size:2.2rem;margin:0 auto 14px}
   .profileCard{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:26px 20px;text-align:center;margin-bottom:18px}
   .profPhotoBtn{background:transparent;border:1px solid var(--border);color:var(--leaf);font-family:inherit;font-weight:600;font-size:.92rem;border-radius:999px;padding:9px 18px;cursor:pointer}
@@ -155,7 +155,8 @@
   .moment .mp{font-family:'Fraunces',serif;font-size:1.18rem;font-weight:600;line-height:1.35;color:var(--text)}
   .actions{display:flex;gap:18px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
   .act{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:2px 0}
-  .act .ic{font-size:1.05rem;line-height:1}
+  .act .ic{font-size:1.05rem;line-height:1;display:inline-flex;align-items:center}
+  .act svg.ic{width:20px;height:20px;display:block}
   .act.like.on{color:var(--coral)}
   .comments{margin-top:12px}
   .comment{font-size:.92rem;line-height:1.5;padding:8px 0;border-top:1px solid var(--border)}
@@ -440,7 +441,10 @@
   var myProfile = { full_name:null, avatar_url:null };
   var photoSheetMode = "post";
   function myName(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.full_name)||"friend"; }
-  function setAvatarEl(el,url,name){ if(!el)return; if(url){ el.textContent=""; el.style.backgroundImage="url('"+url+"')"; el.style.backgroundSize="cover"; el.style.backgroundPosition="center"; } else { el.style.backgroundImage=""; el.textContent=initialOf(name); } }
+  function setAvatarEl(el,url,name){ if(!el)return; if(url){ el.textContent=""; el.style.backgroundImage="url('"+url+"')"; el.style.backgroundSize="cover"; el.style.backgroundPosition="center"; } else { el.style.backgroundImage=""; el.style.background=avatarBg(name); el.textContent=initialOf(name); } }
+  function avatarHue(name){ var ch=(initialOf(name)||"E").charCodeAt(0); return (ch*37)%360; }
+  function avatarBg(name){ var h=avatarHue(name); return "linear-gradient(135deg,hsl("+h+",55%,58%),hsl("+h+",55%,44%))"; }
+  function avatarTag(name,cls){ return '<div class="avatar'+(cls?" "+cls:"")+'" style="background:'+avatarBg(name)+'">'+initialOf(name)+'</div>'; }
   function applyMyAvatar(){ var n=myProfile.full_name||myName(); setAvatarEl($("myAvatar"),myProfile.avatar_url,n); setAvatarEl($("profileAvatar"),myProfile.avatar_url,n); }
   const state = { likeCount:{}, liked:{}, comments:{} };
 
@@ -620,8 +624,22 @@
     const liked=!!state.liked[id];
     const lc=state.likeCount[id]||0;
     const cc=(state.comments[id]||[]).length;
-    return '<button class="act like'+(liked?' on':'')+'" onclick="toggleLike(\''+id+'\')"><span class="ic">'+(liked?'♥':'♡')+'</span> '+lc+'</button>'+
-      '<button class="act" onclick="toggleComments(\''+id+'\')"><span class="ic">💬</span> '+cc+'</button>';
+    const heart = liked
+      ? '<svg class="ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.6-10-9.3C.6 8.9 2 5.4 5.2 5c1.9-.2 3.6.8 4.8 2.3C11.2 5.8 12.9 4.8 14.8 5 18 5.4 19.4 8.9 18 11.7 15.5 16.4 12 21 12 21z"/></svg>'
+      : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.5S5 16.2 2.8 11.9C1.5 9.4 2.7 6.3 5.4 6c1.8-.2 3.4.8 4.5 2.2C11 6.8 12.6 5.8 14.4 6c2.7.3 3.9 3.4 2.6 5.9C15.5 16.2 12 20.5 12 20.5z"/></svg>';
+    const bubble = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>';
+    const share = '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M16 6l-4-4-4 4"/><path d="M12 2v13"/></svg>';
+    return '<button class="act like'+(liked?' on':'')+'" onclick="toggleLike(\''+id+'\')">'+heart+' '+lc+'</button>'+
+      '<button class="act" onclick="toggleComments(\''+id+'\')">'+bubble+' '+cc+'</button>'+
+      '<button class="act" onclick="sharePost(\''+id+'\')">'+share+'</button>';
+  }
+  async function sharePost(id){
+    var url=window.location.origin;
+    try{
+      if(navigator.share){ await navigator.share({title:"Earthafying",text:"A moment from Earthafying 🌍",url:url}); }
+      else if(navigator.clipboard){ await navigator.clipboard.writeText(url); setAppMsg("Link copied","ok"); }
+      else { setAppMsg(url,"ok"); }
+    }catch(e){}
   }
   function renderCommentList(id){
     const list=state.comments[id]||[];
@@ -639,7 +657,7 @@
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
       const body=(p.content&&p.content.trim())?'<div class="body">'+escapeHtml(p.content)+'</div>':'';
       return '<div class="post" id="post-'+p.id+'">'+
-        '<div class="head"><div class="avatar">'+initialOf(p.author_name)+'</div>'+
+        '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
@@ -831,7 +849,7 @@
       if(requests.length){b.textContent=requests.length;b.classList.remove("hide");}else b.classList.add("hide");
     }catch(err){setPeopleMsg("Couldn't load people: "+(err.message||err),"err");}
   }
-  function personRow(p,right,click){var av=p.avatar_url?'<div class="avatar" style="background-image:url(\''+p.avatar_url+'\');background-size:cover;background-position:center"></div>':'<div class="avatar">'+initialOf(p.full_name)+'</div>';var attr=click?(' onclick="'+click+'" style="cursor:pointer"'):'';return '<div class="person"'+attr+'>'+av+'<div class="pname">'+escapeHtml(p.full_name||"Someone")+'</div>'+right+'</div>';}
+  function personRow(p,right,click){var av=p.avatar_url?'<div class="avatar" style="background-image:url(\''+p.avatar_url+'\');background-size:cover;background-position:center"></div>':avatarTag(p.full_name);var attr=click?(' onclick="'+click+'" style="cursor:pointer"'):'';return '<div class="person"'+attr+'>'+av+'<div class="pname">'+escapeHtml(p.full_name||"Someone")+'</div>'+right+'</div>';}
   function renderPeople(requests,connected,discover){
     let rs="";if(requests.length){rs='<h3>Requests &middot; '+requests.length+'</h3>'+requests.map(function(x){return personRow(x.p,'<button class="pbtn accept" onclick="acceptRequest(\''+x.c.id+'\')">Accept</button>');}).join("");}
     $("requestsSection").innerHTML=rs;
