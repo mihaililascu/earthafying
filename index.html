@@ -168,6 +168,12 @@
   .connList .person{background:rgba(4,20,11,.6);border:1px solid rgba(120,220,150,.28);backdrop-filter:blur(3px)}
   .connMore{margin-top:22px;text-align:center;color:rgba(255,255,255,.55);font-size:.85rem;border:1px dashed rgba(160,230,180,.35);border-radius:16px;padding:26px 16px}
   .connSub{margin:22px 0 12px;font-weight:700;font-size:.98rem;color:#eafff0}
+  .connFun{background:rgba(4,20,11,.55);border:1px solid rgba(120,220,150,.28);border-radius:16px;padding:16px;margin-bottom:12px;backdrop-filter:blur(3px)}
+  .cf-title{font-weight:700;color:#9be7b4;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+  .cf-main{color:#eafff0;font-size:1.05rem;font-weight:600;line-height:1.3}
+  .cf-sub{color:rgba(255,255,255,.6);font-size:.85rem;margin-top:5px;line-height:1.4}
+  .crBtn{margin-top:10px;background:rgba(120,220,150,.14);border:1px solid rgba(120,220,150,.4);color:#daffe9;border-radius:20px;padding:8px 14px;font-family:inherit;font-weight:600;font-size:.85rem;cursor:pointer}
+  .crBtn.on{background:rgba(45,204,113,.3)}
   .connCard{background:rgba(4,20,11,.62);border:1px solid rgba(120,220,150,.28);border-radius:16px;padding:12px;margin-bottom:12px;backdrop-filter:blur(3px)}
   .connCard .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .connCard .meta{display:flex;flex-direction:column;line-height:1.2}
@@ -961,6 +967,38 @@
   }
 
   /* people */
+  var CIRCLE_PROMPTS=["something blue","a small kindness","your morning sky","something that made you smile","a view from your window","something green","hands at work","a place you love","light and shadow","someone who matters to you","a taste of home","the colour of today","a quiet corner","where you feel at peace"];
+  function weeklyPrompt(){ var n=new Date(); var start=new Date(n.getFullYear(),0,1); var week=Math.floor((n-start)/(7*864e5)); return CIRCLE_PROMPTS[week%CIRCLE_PROMPTS.length]; }
+  function funCards(){
+    return '<div class="connFun"><div class="cf-title">🌱 This week in your circle</div><div class="cf-main">Share “'+escapeHtml(weeklyPrompt())+'”</div><div class="cf-sub">Post it on the Feed, then see everyone\'s take gathered below.</div></div>'+
+      '<div class="connFun"><div class="cf-title">🌍 Guess the place</div><div class="cf-main">Post a photo of somewhere in your world</div><div class="cf-sub">Let your connections guess the country in the comments.</div></div>';
+  }
+  function milestoneCard(monthCount,people){
+    var line;
+    if(monthCount<=0) line="No moments yet this month — be the first to share one. 🌱";
+    else line="Your circle has shared <b>"+monthCount+"</b> "+(monthCount===1?"moment":"moments")+" this month, across "+people+" "+(people===1?"connection":"connections")+". 💚";
+    return '<div class="connFun"><div class="cf-title">✨ Together this month</div><div class="cf-main" style="font-size:.98rem;font-weight:500">'+line+'</div></div>';
+  }
+  function connReactBtn(id){
+    var on=!!state.liked[id]; var n=state.likeCount[id]||0;
+    return '<button class="crBtn'+(on?' on':'')+'" onclick="connReact(\''+id+'\',this)"><span>'+(on?'💚':'🤍')+'</span> '+(n>0?n+(n===1?' appreciation':' appreciations'):'Appreciate')+'</button>';
+  }
+  async function connReact(id,btn){
+    if(!currentUser)return;
+    var liked=!!state.liked[id];
+    try{
+      if(liked){
+        await sb.from("likes").delete().eq("post_id",id).eq("user_id",currentUser.id);
+        state.liked[id]=false; state.likeCount[id]=Math.max(0,(state.likeCount[id]||1)-1);
+      } else {
+        await sb.from("likes").insert({post_id:id,user_id:currentUser.id});
+        state.liked[id]=true; state.likeCount[id]=(state.likeCount[id]||0)+1;
+      }
+      var on=!!state.liked[id],n=state.likeCount[id]||0;
+      btn.classList.toggle("on",on);
+      btn.innerHTML='<span>'+(on?'💚':'🤍')+'</span> '+(n>0?n+(n===1?' appreciation':' appreciations'):'Appreciate');
+    }catch(e){}
+  }
   function openConnectionsPage(){
     var list=$("connList");
     if(lastConnected&&lastConnected.length){
@@ -968,6 +1006,7 @@
     } else {
       list.innerHTML='<div class="connEmpty">No connections yet.<br>Connect with people on the People tab. 🌍</div>';
     }
+    $("connFun").innerHTML=funCards();
     $("connectionsPage").classList.remove("hide");
     document.body.style.overflow="hidden";
     try{ history.pushState({conn:true},""); }catch(e){}
@@ -982,8 +1021,11 @@
       var r=await sb.from("posts").select("*").in("user_id",ids).order("created_at",{ascending:false}).limit(30);
       if(r.error)throw r.error;
       var posts=r.data||[];
-      if(!posts.length){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">No moments yet.<br>When your connections share, their photos and music appear here. 🌍</div>'; return; }
-      wrap.innerHTML='<div class="connSub">Recent moments from your connections</div>'+posts.map(connMomentCard).join("");
+      var now=new Date();
+      var monthCount=posts.filter(function(p){var d=new Date(p.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
+      var ms=milestoneCard(monthCount,ids.length);
+      if(!posts.length){ wrap.innerHTML=ms+'<div class="connSub">Recent moments from your connections</div><div class="connEmpty">No moments yet.<br>When your connections share, their photos and music appear here. 🌍</div>'; return; }
+      wrap.innerHTML=ms+'<div class="connSub">Recent moments from your connections</div>'+posts.map(connMomentCard).join("");
     }catch(err){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">Couldn\'t load moments right now.</div>'; }
   }
   function connMomentCard(p){
@@ -991,7 +1033,7 @@
     var img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="openPhoto(this.src)" alt="moment" />':'';
     var body=(parsed.caption&&parsed.caption.trim())?'<div class="body">'+escapeHtml(parsed.caption)+'</div>':'';
     var music=parsed.url?('<div class="musicWrap">'+musicEmbedHtml(parsed.url)+'</div>'):'';
-    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+escapeHtml(p.author_name||"Someone")+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+body+music+'</div>';
+    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+escapeHtml(p.author_name||"Someone")+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+body+music+connReactBtn(p.id)+'</div>';
   }
   function closeConnectionsPage(){
     $("connectionsPage").classList.add("hide");
@@ -1462,6 +1504,7 @@
     </div>
     <div class="connBody">
       <div class="connList" id="connList"></div>
+      <div id="connFun"></div>
       <div class="connMoments" id="connMoments"></div>
       <div class="connMore">More coming here soon 🌱</div>
     </div>
