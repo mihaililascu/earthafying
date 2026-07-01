@@ -221,6 +221,13 @@
   .pwWrap{position:relative;display:flex;align-items:center}
   .ctySelect{width:100%;font-family:inherit;font-size:1rem;padding:13px 14px;border-radius:12px;border:2px solid transparent;background:#fbf7ec;color:#1a1f12;outline:none}
   .ctySelect:focus{border-color:var(--amber)}
+  .helpMenu{display:flex;flex-direction:column;gap:10px;margin:10px 0 32px}
+  .helpItem{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 16px;color:var(--text);text-decoration:none;font-family:inherit;cursor:pointer}
+  .helpItem:active{transform:scale(.995)}
+  .hi-ic{font-size:1.3rem;flex:none}
+  .hi-tx{display:flex;flex-direction:column;line-height:1.3}
+  .hi-tx b{font-size:1rem}
+  .hi-tx span{color:var(--muted);font-size:.82rem}
   .opt{color:var(--muted);font-weight:400;font-size:.85em}
   .flag{margin-left:6px;font-size:1.05em;vertical-align:-1px;cursor:pointer}
   .flag.flagOpen{background:rgba(255,255,255,.12);border-radius:8px;padding:1px 7px}
@@ -475,6 +482,12 @@
     </div>
     <h3 class="gridHead">Your photos</h3>
     <div id="profileGrid" class="photoGrid"><div class="gridEmpty">Loading…</div></div>
+    <h3 class="gridHead">Help &amp; support</h3>
+    <div class="helpMenu">
+      <a class="helpItem" href="mailto:mihailascu05@gmail.com?subject=Earthafying%20-%20Contact"><span class="hi-ic">✉️</span><span class="hi-tx"><b>Contact us</b><span>Send a message or a question</span></span></a>
+      <a class="helpItem" href="mailto:mihailascu05@gmail.com?subject=Earthafying%20-%20Report%20a%20problem"><span class="hi-ic">⚠️</span><span class="hi-tx"><b>Report a problem</b><span>Flag something that isn't right</span></span></a>
+      <button class="helpItem" onclick="openTerms(event)"><span class="hi-ic">📄</span><span class="hi-tx"><b>Community Guidelines &amp; Terms</b><span>How we keep Earthafying kind &amp; safe</span></span></button>
+    </div>
   </div>
 
   <div id="userView" class="hide">
