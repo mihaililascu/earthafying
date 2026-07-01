@@ -1006,7 +1006,7 @@
     } else {
       list.innerHTML='<div class="connEmpty">No connections yet.<br>Connect with people on the People tab. 🌍</div>';
     }
-    $("connFun").innerHTML=funCards();
+    $("connFun").innerHTML="";
     $("connectionsPage").classList.remove("hide");
     document.body.style.overflow="hidden";
     try{ history.pushState({conn:true},""); }catch(e){}
@@ -1021,11 +1021,8 @@
       var r=await sb.from("posts").select("*").in("user_id",ids).order("created_at",{ascending:false}).limit(30);
       if(r.error)throw r.error;
       var posts=r.data||[];
-      var now=new Date();
-      var monthCount=posts.filter(function(p){var d=new Date(p.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
-      var ms=milestoneCard(monthCount,ids.length);
-      if(!posts.length){ wrap.innerHTML=ms+'<div class="connSub">Recent moments from your connections</div><div class="connEmpty">No moments yet.<br>When your connections share, their photos and music appear here. 🌍</div>'; return; }
-      wrap.innerHTML=ms+'<div class="connSub">Recent moments from your connections</div>'+posts.map(connMomentCard).join("");
+      if(!posts.length){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">No moments yet.<br>When your connections share, their photos and music appear here. 🌍</div>'; return; }
+      wrap.innerHTML='<div class="connSub">Recent moments from your connections</div>'+posts.map(connMomentCard).join("");
     }catch(err){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">Couldn\'t load moments right now.</div>'; }
   }
   function connMomentCard(p){
