@@ -223,8 +223,7 @@
   .ctySelect:focus{border-color:var(--amber)}
   .opt{color:var(--muted);font-weight:400;font-size:.85em}
   .flag{margin-left:6px;font-size:1.05em;vertical-align:-1px;cursor:pointer}
-  .flagToast{position:fixed;left:50%;top:calc(16px + env(safe-area-inset-top));transform:translateX(-50%);z-index:1300;background:rgba(20,26,16,.96);color:#fff;border:1px solid var(--border);border-radius:22px;padding:11px 20px;font-weight:600;font-size:.95rem;box-shadow:0 8px 28px rgba(0,0,0,.45)}
-  .flagToast.hide{display:none}
+  .flag.flagOpen{background:rgba(255,255,255,.12);border-radius:8px;padding:1px 7px}
   .pwWrap input{flex:1;padding-right:66px}
   .pwToggle{position:absolute;right:8px;background:none;border:none;color:var(--muted);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;padding:6px 8px}
   .forgotRow{margin-top:8px;font-size:.85rem}
@@ -549,8 +548,8 @@
   var COUNTRY_MAP=null;
   function countryName(cc){ if(!COUNTRY_MAP){COUNTRY_MAP={};for(var i=0;i<COUNTRIES.length;i++)COUNTRY_MAP[COUNTRIES[i][0]]=COUNTRIES[i][1];} return COUNTRY_MAP[cc]||cc; }
   var flagToastTimer=null;
-  function showCountry(e,cc){ if(e&&e.stopPropagation)e.stopPropagation(); var t=$("flagToast"); if(!t)return; t.textContent=flagEmoji(cc)+" "+countryName(cc); t.classList.remove("hide"); if(flagToastTimer)clearTimeout(flagToastTimer); flagToastTimer=setTimeout(function(){t.classList.add("hide");},1900); }
-  function flagTag(cc){ return cc?'<span class="flag" onclick="showCountry(event,\''+cc+'\')">'+flagEmoji(cc)+'</span>':''; }
+  function showCountry(e,el){ if(e&&e.stopPropagation)e.stopPropagation(); var cc=el&&el.getAttribute?el.getAttribute("data-cc"):""; if(!cc)return; if(el._t)clearTimeout(el._t); el.innerHTML=flagEmoji(cc)+" "+countryName(cc); el.classList.add("flagOpen"); el._t=setTimeout(function(){ el.innerHTML=flagEmoji(cc); el.classList.remove("flagOpen"); },2500); }
+  function flagTag(cc){ return cc?'<span class="flag" data-cc="'+cc+'" onclick="showCountry(event,this)">'+flagEmoji(cc)+'</span>':''; }
   function musicBtnHtml(url){
     var info=musicInfo(url);
     var label=(info.list?"Playlist on ":"Play on ")+info.name;
@@ -1517,7 +1516,6 @@
       </div>
     </div>
   </div>
-  <div id="flagToast" class="flagToast hide"></div>
   <div id="connectionsPage" class="connPage hide">
     <svg class="connNet" viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <g stroke="#2ecc71" stroke-width="0.7" opacity="0.3">
