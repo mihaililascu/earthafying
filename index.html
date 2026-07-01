@@ -168,8 +168,9 @@
   .connList .person{background:rgba(4,20,11,.6);border:1px solid rgba(120,220,150,.28);backdrop-filter:blur(3px)}
   .connMore{margin-top:22px;text-align:center;color:rgba(255,255,255,.55);font-size:.85rem;border:1px dashed rgba(160,230,180,.35);border-radius:16px;padding:26px 16px}
   .connEmpty{text-align:center;color:rgba(255,255,255,.72);padding:30px 16px;line-height:1.5}
-  .connOpen{cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-  .connArrow{color:#7dd492}
+  .connOpen{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;margin:6px 0 12px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(45,204,113,.16),rgba(45,204,113,.05));border:1px solid rgba(120,220,150,.5);color:var(--text);font-family:inherit;font-weight:700;font-size:1rem;letter-spacing:.02em;cursor:pointer;text-align:left}
+  .connOpen:active{transform:scale(.99)}
+  .connArrow{color:#7dd492;font-weight:700;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
   .musicBtn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:24px;background:var(--mc,#8ab4f8);color:#fff;font-weight:700;font-size:.9rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .musicBtn .mbi{font-size:.95rem}
   .musicBar{display:flex;gap:8px;margin-top:10px}
@@ -203,6 +204,12 @@
   .agreeLabel input{margin-top:2px;flex:none;width:18px;height:18px;accent-color:var(--amber)}
   .agreeLabel a{color:var(--amber);text-decoration:underline}
   .termsOverlay{position:fixed;inset:0;background:rgba(6,5,13,.96);z-index:1200;display:flex;align-items:center;justify-content:center;padding:14px}
+  .pwWrap{position:relative;display:flex;align-items:center}
+  .pwWrap input{flex:1;padding-right:66px}
+  .pwToggle{position:absolute;right:8px;background:none;border:none;color:var(--muted);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;padding:6px 8px}
+  .forgotRow{margin-top:8px;font-size:.85rem}
+  .forgotRow a{color:var(--amber);text-decoration:none}
+  #newPw{width:100%;margin:6px 0 12px}
   .termsOverlay.hide{display:none}
   .termsSheet{background:var(--surface);border:1px solid var(--border);border-radius:18px;max-width:560px;width:100%;max-height:88vh;display:flex;flex-direction:column;overflow:hidden}
   .termsHead{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border)}
@@ -281,7 +288,11 @@
     <label for="email">Email</label>
     <input id="email" type="email" placeholder="your@email.com" autocomplete="email" />
     <label for="password">Password</label>
-    <input id="password" type="password" placeholder="At least 6 characters" autocomplete="current-password" />
+    <div class="pwWrap">
+      <input id="password" type="password" placeholder="At least 6 characters" autocomplete="current-password" />
+      <button type="button" class="pwToggle" onclick="togglePw(this)">Show</button>
+    </div>
+    <div id="forgotRow" class="forgotRow"><a href="#" onclick="forgotPassword(event)">Forgot your password?</a></div>
     <div id="dobRow" class="hide">
       <label>Your date of birth</label>
       <div class="dobGrid">
@@ -540,6 +551,7 @@
     $("nameRow").classList.toggle("hide",m!=="signup");
     $("dobRow").classList.toggle("hide",m!=="signup");
     $("agreeRow").classList.toggle("hide",m!=="signup");
+    var fr=$("forgotRow"); if(fr) fr.classList.toggle("hide",m!=="login");
     var ab=$("agreeBox"); if(ab&&m!=="signup") ab.checked=false;
     $("goBtn").textContent=m==="signup"?"Create my account":"Log in";
     setMsg("");
@@ -605,6 +617,30 @@
   }
   function timeAgo(iso){const s=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(s<60)return "just now";const m=Math.floor(s/60);if(m<60)return m+"m ago";const h=Math.floor(m/60);if(h<24)return h+"h ago";const d=Math.floor(h/24);if(d<7)return d+"d ago";return new Date(iso).toLocaleDateString();}
 
+  function togglePw(btn){ var i=$("password"); if(i.type==="password"){i.type="text";btn.textContent="Hide";} else {i.type="password";btn.textContent="Show";} }
+  async function forgotPassword(e){
+    if(e)e.preventDefault();
+    var email=$("email").value.trim();
+    if(!validEmail(email)) return setMsg("Type your email in the box above, then tap 'Forgot your password?'","err");
+    setMsg("Sending reset link…");
+    try{
+      var r=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+      if(r.error)throw r.error;
+      setMsg("Check your email for a link to reset your password.","ok");
+    }catch(err){ setMsg(err.message||"Couldn't send the reset email — please try again.","err"); }
+  }
+  async function submitNewPassword(){
+    var pw=$("newPw").value;
+    if(pw.length<6){ $("pwResetMsg").textContent="Password needs at least 6 characters."; return; }
+    try{
+      var r=await sb.auth.updateUser({password:pw});
+      if(r.error)throw r.error;
+      $("pwResetMsg").textContent="Password updated!";
+      $("pwResetOverlay").classList.add("hide");
+      var s=await sb.auth.getSession();
+      if(s.data.session) await enterApp(s.data.session.user);
+    }catch(err){ $("pwResetMsg").textContent=err.message||"Couldn't update password."; }
+  }
   async function submitAuth(){
     const email=$("email").value.trim(),password=$("password").value;
     if(!validEmail(email))return setMsg("Enter a valid email.","err");
@@ -960,7 +996,7 @@
     let rs="";if(requests.length){rs='<h3>Requests &middot; '+requests.length+'</h3>'+requests.map(function(x){return personRow(x.p,'<button class="pbtn accept" onclick="acceptRequest(\''+x.c.id+'\')">Accept</button>');}).join("");}
     $("requestsSection").innerHTML=rs;
     lastConnected=connected.slice();
-    let cs="";if(connected.length){cs='<h3 class="connOpen" onclick="openConnectionsPage()">Your connections &middot; '+connected.length+' <span class="connArrow">›</span></h3>'+connected.map(function(x){return personRow(x.p,'<span class="pill linked">View ›</span>',"viewUser('"+x.p.id+"')");}).join("");}
+    let cs="";if(connected.length){cs='<button class="connOpen" onclick="openConnectionsPage()"><span>Your connections &middot; '+connected.length+'</span><span class="connArrow">Open ›</span></button>'+connected.map(function(x){return personRow(x.p,'<span class="pill linked">View ›</span>',"viewUser('"+x.p.id+"')");}).join("");}
     $("connectionsSection").innerHTML=cs;
     let ds='<h3>Discover people</h3>';
     if(!discover.length){ds+='<div class="empty">No one else here yet.<br>Invite a friend to join Earthafying. 🌍</div>';}
@@ -1343,6 +1379,11 @@
     });
   }
 
+  sb.auth.onAuthStateChange(function(evt,session){
+    if(evt==="PASSWORD_RECOVERY"){
+      var o=$("pwResetOverlay"); if(o){ o.classList.remove("hide"); }
+    }
+  });
   (async function(){const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user);})();
 </script>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
@@ -1350,6 +1391,17 @@
       <stop offset="0" stop-color="#2bbf86"/><stop offset="1" stop-color="#1f86d6"/>
     </linearGradient>
   </defs></svg>
+  <div id="pwResetOverlay" class="termsOverlay hide">
+    <div class="termsSheet">
+      <div class="termsHead"><h2>Set a new password</h2></div>
+      <div class="termsBody">
+        <p>Enter a new password for your account.</p>
+        <input id="newPw" type="password" placeholder="New password (at least 6 characters)" autocomplete="new-password" />
+        <button class="go" onclick="submitNewPassword()">Save new password</button>
+        <div class="msg" id="pwResetMsg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
   <div id="connectionsPage" class="connPage hide">
     <svg class="connNet" viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
       <g stroke="#2ecc71" stroke-width="0.7" opacity="0.3">
