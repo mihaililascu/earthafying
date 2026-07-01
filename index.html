@@ -157,6 +157,13 @@
   .act{display:flex;align-items:center;gap:6px;font-family:inherit;font-size:.9rem;font-weight:600;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:2px 0}
   .act .ic{font-size:1.05rem;line-height:1;display:inline-flex;align-items:center}
   .act svg.ic{width:28px;height:28px;display:block}
+  .musicWrap{margin:2px 0 8px}
+  .musicBtn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:24px;background:var(--mc,#8ab4f8);color:#fff;font-weight:700;font-size:.9rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  .musicBtn .mbi{font-size:.95rem}
+  .musicBar{display:flex;gap:8px;margin-top:10px}
+  .musicBar button{background:linear-gradient(120deg,var(--coral),var(--amber));color:#fff;border:none;border-radius:12px;padding:0 16px;font-weight:700;cursor:pointer}
+  .musicChip{display:inline-flex;align-items:center;gap:10px;margin-top:10px;padding:9px 14px;border-radius:20px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:.88rem;font-weight:600}
+  .musicChip button{background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:0 2px}
   .act.like.on{color:var(--coral)}
   .comments{margin-top:12px}
   .comment{font-size:.92rem;line-height:1.5;padding:8px 0;border-top:1px solid var(--border)}
@@ -367,9 +374,15 @@
         <button class="editImg" onclick="teOpen()">✏️ Add text</button>
         <button class="editImg editImg2" onclick="teOpen(true)">🎨 Filter</button>
       </div>
+      <div class="musicBar hide" id="musicBar">
+        <input id="musicInput" placeholder="Paste a Spotify / YouTube / Apple Music link" />
+        <button onclick="attachMusic()">Attach</button>
+      </div>
+      <div class="musicChip hide" id="musicChip"><span id="musicChipText"></span> <button onclick="clearMusic()" title="Remove">✕</button></div>
       <div class="row">
         <div class="leftrow">
           <button class="photoBtn" id="photoBtn">📷 Photo</button>
+          <button class="photoBtn" id="musicToggle" onclick="toggleMusicBar()">🎵 Music</button>
           <span class="count" id="count">0 / 500</span>
         </div>
         <button class="share" id="shareBtn" onclick="createPost()">Share</button>
@@ -436,6 +449,45 @@
   let mode = "login";
   let currentUser = null;
   let pendingFile = null;
+  let pendingMusic = null;
+  function musicInfo(url){
+    var u=(url||"").toLowerCase();
+    var list=u.indexOf("playlist")>=0||u.indexOf("/album")>=0||u.indexOf("list=")>=0||u.indexOf("/sets/")>=0;
+    if(u.indexOf("spotify")>=0) return {name:"Spotify",color:"#1DB954",list:list};
+    if(u.indexOf("music.apple")>=0||u.indexOf("itunes.apple")>=0) return {name:"Apple Music",color:"#fa2b56",list:list};
+    if(u.indexOf("youtu")>=0) return {name:"YouTube",color:"#ff0000",list:list};
+    if(u.indexOf("soundcloud")>=0) return {name:"SoundCloud",color:"#ff5500",list:list};
+    if(u.indexOf("deezer")>=0) return {name:"Deezer",color:"#a238ff",list:list};
+    if(u.indexOf("tidal")>=0) return {name:"Tidal",color:"#127e8a",list:list};
+    if(u.indexOf("amazon")>=0) return {name:"Amazon Music",color:"#1a998c",list:list};
+    if(u.indexOf("bandcamp")>=0) return {name:"Bandcamp",color:"#629aa9",list:list};
+    return {name:"Music",color:"#8ab4f8",list:list};
+  }
+  function toggleMusicBar(){ var b=$("musicBar"); b.classList.toggle("hide"); if(!b.classList.contains("hide")) $("musicInput").focus(); }
+  function attachMusic(){
+    var v=$("musicInput").value.trim();
+    if(!v) return;
+    if(!/^https?:\/\//i.test(v)){ setAppMsg("Paste a full link that starts with http.","err"); return; }
+    pendingMusic=v;
+    var info=musicInfo(v);
+    $("musicChipText").textContent="🎵 "+(info.list?"Playlist":"Song")+" · "+info.name;
+    $("musicChip").classList.remove("hide");
+    $("musicBar").classList.add("hide");
+    $("musicInput").value="";
+    setAppMsg("");
+  }
+  function clearMusic(){ pendingMusic=null; var c=$("musicChip"); if(c)c.classList.add("hide"); }
+  function parseMusic(content){
+    if(!content) return {caption:"",url:null};
+    var i=content.indexOf("[[MUSIC]]");
+    if(i<0) return {caption:content,url:null};
+    return {caption:content.slice(0,i).trim(), url:content.slice(i+9).trim()};
+  }
+  function musicBtnHtml(url){
+    var info=musicInfo(url);
+    var label=(info.list?"Playlist on ":"Play on ")+info.name;
+    return '<a class="musicBtn" style="--mc:'+info.color+'" href="'+escapeHtml(url)+'" target="_blank" rel="noopener"><span class="mbi">'+(info.list?"♫":"▶")+'</span>'+escapeHtml(label)+'</a>';
+  }
   const ADMIN_EMAIL = "mihailascu05@gmail.com";
   function isAdmin(){ return !!currentUser && (currentUser.email||"").toLowerCase() === ADMIN_EMAIL; }
   var myProfile = { full_name:null, avatar_url:null };
@@ -657,13 +709,15 @@
     feed.innerHTML=posts.map(function(p){
       const nm=escapeHtml(p.author_name||"Someone");
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
-      const body=(p.content&&p.content.trim())?'<div class="body">'+escapeHtml(p.content)+'</div>':'';
+      const parsedM=parseMusic(p.content||"");
+      const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
+      const music=parsedM.url?('<div class="musicWrap">'+musicBtnHtml(parsedM.url)+'</div>'):'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
-        img+body+
+        img+body+music+
         '<div class="actions" id="actions-'+p.id+'">'+renderActions(p.id)+'</div>'+
         '<div class="comments hide" id="comments-'+p.id+'">'+
           '<div class="clist" id="clist-'+p.id+'">'+renderCommentList(p.id)+'</div>'+
@@ -804,7 +858,7 @@
   function clearPhoto(){pendingFile=null;$("fileInput").value="";var ci=$("cameraInput");if(ci)ci.value="";$("preview").classList.add("hide");$("previewImg").src="";}
   async function createPost(){
     const text=$("postText").value.trim();
-    if(!text&&!pendingFile){setAppMsg("Write something or add a photo first.","err");return;}
+    if(!text&&!pendingFile&&!pendingMusic){setAppMsg("Write something, add a photo, or attach music first.","err");return;}
     if(!currentUser)return;
     $("shareBtn").disabled=true;setAppMsg("");
     const name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
@@ -818,10 +872,12 @@
         if(up.error)throw up.error;
         imageUrl=sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
       }
+      let finalContent=text;
+      if(pendingMusic){ finalContent=(text?text+"\n":"")+"[[MUSIC]]"+pendingMusic; }
       setAppMsg("Sharing…");
-      const {error}=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:text,image_url:imageUrl});
+      const {error}=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:imageUrl});
       if(error)throw error;
-      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();setAppMsg("");
+      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();setAppMsg("");
       await loadFeed();
     }catch(err){setAppMsg("Couldn't share: "+(err.message||err),"err");}
     $("shareBtn").disabled=false;
