@@ -812,7 +812,7 @@
     try{
       if(pendingFile){
         setAppMsg("Uploading photo…");
-        const blob=await resizeImage(pendingFile,1280,0.82);
+        const blob=await resizeImage(pendingFile,2560,0.92);
         const path=currentUser.id+"/"+Date.now()+".jpg";
         const up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
         if(up.error)throw up.error;
@@ -1188,7 +1188,7 @@
   }
   function teBake(){
     return new Promise(function(resolve,reject){
-      var maxDim = 1280;
+      var maxDim = 2560;
       var r = Math.min(1, maxDim/Math.max(te.natW,te.natH));
       var cw = Math.round(te.natW*r), ch = Math.round(te.natH*r);
       var canvas = document.createElement("canvas");
@@ -1231,7 +1231,7 @@
           lines.forEach(function(L,i){ ctx.fillText(L, cx, startY + i*lineH); });
           ctx.restore();
         });
-        canvas.toBlob(function(b){ b?resolve(b):reject(new Error("could not render")); },"image/jpeg",0.85);
+        canvas.toBlob(function(b){ b?resolve(b):reject(new Error("could not render")); },"image/jpeg",0.92);
       };
       img.onerror=function(){ reject(new Error("could not read photo")); };
       img.src = URL.createObjectURL(pendingFile);
