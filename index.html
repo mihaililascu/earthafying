@@ -158,6 +158,7 @@
   .act .ic{font-size:1.05rem;line-height:1;display:inline-flex;align-items:center}
   .act svg.ic{width:28px;height:28px;display:block}
   .musicWrap{margin:2px 0 8px}
+  .spotifyEmbed{width:100%;border:0;border-radius:12px;display:block}
   .musicBtn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:24px;background:var(--mc,#8ab4f8);color:#fff;font-weight:700;font-size:.9rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .musicBtn .mbi{font-size:.95rem}
   .musicBar{display:flex;gap:8px;margin-top:10px}
@@ -488,6 +489,25 @@
     var label=(info.list?"Playlist on ":"Play on ")+info.name;
     return '<a class="musicBtn" style="--mc:'+info.color+'" href="'+escapeHtml(url)+'" target="_blank" rel="noopener"><span class="mbi">'+(info.list?"♫":"▶")+'</span>'+escapeHtml(label)+'</a>';
   }
+  function spotifyEmbed(url){
+    var m=url.match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|playlist|album|episode|show)\/([A-Za-z0-9]+)/i);
+    if(m) return {type:m[1].toLowerCase(),id:m[2]};
+    var u=url.match(/spotify:(track|playlist|album|episode|show):([A-Za-z0-9]+)/i);
+    if(u) return {type:u[1].toLowerCase(),id:u[2]};
+    return null;
+  }
+  function musicEmbedHtml(url){
+    var info=musicInfo(url);
+    if(info.name==="Spotify"){
+      var s=spotifyEmbed(url);
+      if(s){
+        var h=(s.type==="track"||s.type==="episode")?152:352;
+        var src="https://open.spotify.com/embed/"+s.type+"/"+s.id;
+        return '<iframe class="spotifyEmbed" src="'+escapeHtml(src)+'" width="100%" height="'+h+'" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>';
+      }
+    }
+    return musicBtnHtml(url);
+  }
   const ADMIN_EMAIL = "mihailascu05@gmail.com";
   function isAdmin(){ return !!currentUser && (currentUser.email||"").toLowerCase() === ADMIN_EMAIL; }
   var myProfile = { full_name:null, avatar_url:null };
@@ -711,7 +731,7 @@
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
       const parsedM=parseMusic(p.content||"");
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
-      const music=parsedM.url?('<div class="musicWrap">'+musicBtnHtml(parsedM.url)+'</div>'):'';
+      const music=parsedM.url?('<div class="musicWrap">'+musicEmbedHtml(parsedM.url)+'</div>'):'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
