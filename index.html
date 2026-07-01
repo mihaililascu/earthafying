@@ -167,6 +167,14 @@
   .connBody{position:relative;z-index:2;max-width:640px;margin:0 auto;padding:6px 16px 44px}
   .connList .person{background:rgba(4,20,11,.6);border:1px solid rgba(120,220,150,.28);backdrop-filter:blur(3px)}
   .connMore{margin-top:22px;text-align:center;color:rgba(255,255,255,.55);font-size:.85rem;border:1px dashed rgba(160,230,180,.35);border-radius:16px;padding:26px 16px}
+  .connSub{margin:22px 0 12px;font-weight:700;font-size:.98rem;color:#eafff0}
+  .connCard{background:rgba(4,20,11,.62);border:1px solid rgba(120,220,150,.28);border-radius:16px;padding:12px;margin-bottom:12px;backdrop-filter:blur(3px)}
+  .connCard .head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .connCard .meta{display:flex;flex-direction:column;line-height:1.2}
+  .connCard .who{font-weight:700;color:#eafff0}
+  .connCard .time{font-size:.78rem;color:rgba(255,255,255,.5)}
+  .connCard .postimg{width:100%;border-radius:12px;display:block;cursor:zoom-in}
+  .connCard .body{margin-top:8px;color:#eafff0;line-height:1.4}
   .connEmpty{text-align:center;color:rgba(255,255,255,.72);padding:30px 16px;line-height:1.5}
   .connOpen{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;margin:6px 0 12px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(45,204,113,.16),rgba(45,204,113,.05));border:1px solid rgba(120,220,150,.5);color:var(--text);font-family:inherit;font-weight:700;font-size:1rem;letter-spacing:.02em;cursor:pointer;text-align:left}
   .connOpen:active{transform:scale(.99)}
@@ -963,6 +971,27 @@
     $("connectionsPage").classList.remove("hide");
     document.body.style.overflow="hidden";
     try{ history.pushState({conn:true},""); }catch(e){}
+    loadConnMoments();
+  }
+  async function loadConnMoments(){
+    var wrap=$("connMoments"); if(!wrap) return;
+    var ids=(lastConnected||[]).map(function(x){return x.p.id;});
+    if(!ids.length){ wrap.innerHTML=""; return; }
+    wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">Loading…</div>';
+    try{
+      var r=await sb.from("posts").select("*").in("user_id",ids).order("created_at",{ascending:false}).limit(30);
+      if(r.error)throw r.error;
+      var posts=r.data||[];
+      if(!posts.length){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">No moments yet.<br>When your connections share, their photos and music appear here. 🌍</div>'; return; }
+      wrap.innerHTML='<div class="connSub">Recent moments from your connections</div>'+posts.map(connMomentCard).join("");
+    }catch(err){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">Couldn\'t load moments right now.</div>'; }
+  }
+  function connMomentCard(p){
+    var parsed=parseMusic(p.content||"");
+    var img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="openPhoto(this.src)" alt="moment" />':'';
+    var body=(parsed.caption&&parsed.caption.trim())?'<div class="body">'+escapeHtml(parsed.caption)+'</div>':'';
+    var music=parsed.url?('<div class="musicWrap">'+musicEmbedHtml(parsed.url)+'</div>'):'';
+    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+escapeHtml(p.author_name||"Someone")+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+body+music+'</div>';
   }
   function closeConnectionsPage(){
     $("connectionsPage").classList.add("hide");
@@ -1433,6 +1462,7 @@
     </div>
     <div class="connBody">
       <div class="connList" id="connList"></div>
+      <div class="connMoments" id="connMoments"></div>
       <div class="connMore">More coming here soon 🌱</div>
     </div>
   </div>
