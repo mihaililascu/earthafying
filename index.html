@@ -936,7 +936,7 @@
     if(!file||!currentUser)return;
     setProfileMsg("Uploading photo…");
     try{
-      const blob=await resizeImage(file,512,0.85);
+      const blob=await resizeImage(file,1280,0.92);
       const path="avatars/"+currentUser.id+"-"+Date.now()+".jpg";
       const up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
       if(up.error)throw up.error;
