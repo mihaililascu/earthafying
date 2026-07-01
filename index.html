@@ -219,6 +219,10 @@
   .agreeLabel a{color:var(--amber);text-decoration:underline}
   .termsOverlay{position:fixed;inset:0;background:rgba(6,5,13,.96);z-index:1200;display:flex;align-items:center;justify-content:center;padding:14px}
   .pwWrap{position:relative;display:flex;align-items:center}
+  .ctySelect{width:100%;font-family:inherit;font-size:1rem;padding:13px 14px;border-radius:12px;border:2px solid transparent;background:#fbf7ec;color:#1a1f12;outline:none}
+  .ctySelect:focus{border-color:var(--amber)}
+  .opt{color:var(--muted);font-weight:400;font-size:.85em}
+  .flag{margin-left:6px;font-size:1.05em;vertical-align:-1px}
   .pwWrap input{flex:1;padding-right:66px}
   .pwToggle{position:absolute;right:8px;background:none;border:none;color:var(--muted);font-family:inherit;font-weight:600;font-size:.82rem;cursor:pointer;padding:6px 8px}
   .forgotRow{margin-top:8px;font-size:.85rem}
@@ -298,6 +302,10 @@
     <div id="nameRow" class="hide">
       <label for="name">Your name</label>
       <input id="name" type="text" placeholder="Your name" autocomplete="name" />
+    </div>
+    <div id="countryRow" class="hide">
+      <label for="signupCountry">Where are you posting from? <span class="opt">(optional)</span></label>
+      <select id="signupCountry" class="ctySelect"></select>
     </div>
     <label for="email">Email</label>
     <input id="email" type="email" placeholder="your@email.com" autocomplete="email" />
@@ -459,6 +467,9 @@
       <label class="profLabel" for="profileName">Your name</label>
       <input id="profileName" class="profInput" maxlength="40" placeholder="Your name" />
       <button class="profSave" onclick="saveProfileName()">Save name</button>
+      <label class="profLabel" for="profileCountry">Where you're posting from <span class="opt">(optional)</span></label>
+      <select id="profileCountry" class="ctySelect profInput"></select>
+      <button class="profSave" onclick="saveCountry()">Save country</button>
       <div class="appMsg" id="profileMsg"></div>
     </div>
     <h3 class="gridHead">Your photos</h3>
@@ -521,6 +532,18 @@
     if(i<0) return {caption:content,url:null};
     return {caption:content.slice(0,i).trim(), url:content.slice(i+9).trim()};
   }
+  var COUNTRIES=[["AF","Afghanistan"],["AL","Albania"],["DZ","Algeria"],["AD","Andorra"],["AO","Angola"],["AG","Antigua & Barbuda"],["AR","Argentina"],["AM","Armenia"],["AU","Australia"],["AT","Austria"],["AZ","Azerbaijan"],["BS","Bahamas"],["BH","Bahrain"],["BD","Bangladesh"],["BB","Barbados"],["BY","Belarus"],["BE","Belgium"],["BZ","Belize"],["BJ","Benin"],["BT","Bhutan"],["BO","Bolivia"],["BA","Bosnia & Herzegovina"],["BW","Botswana"],["BR","Brazil"],["BN","Brunei"],["BG","Bulgaria"],["BF","Burkina Faso"],["BI","Burundi"],["KH","Cambodia"],["CM","Cameroon"],["CA","Canada"],["CV","Cape Verde"],["CF","Central African Republic"],["TD","Chad"],["CL","Chile"],["CN","China"],["CO","Colombia"],["KM","Comoros"],["CG","Congo"],["CD","Congo (DRC)"],["CR","Costa Rica"],["CI","Côte d'Ivoire"],["HR","Croatia"],["CU","Cuba"],["CY","Cyprus"],["CZ","Czechia"],["DK","Denmark"],["DJ","Djibouti"],["DM","Dominica"],["DO","Dominican Republic"],["EC","Ecuador"],["EG","Egypt"],["SV","El Salvador"],["GQ","Equatorial Guinea"],["ER","Eritrea"],["EE","Estonia"],["SZ","Eswatini"],["ET","Ethiopia"],["FJ","Fiji"],["FI","Finland"],["FR","France"],["GA","Gabon"],["GM","Gambia"],["GE","Georgia"],["DE","Germany"],["GH","Ghana"],["GR","Greece"],["GD","Grenada"],["GT","Guatemala"],["GN","Guinea"],["GW","Guinea-Bissau"],["GY","Guyana"],["HT","Haiti"],["HN","Honduras"],["HU","Hungary"],["IS","Iceland"],["IN","India"],["ID","Indonesia"],["IR","Iran"],["IQ","Iraq"],["IE","Ireland"],["IL","Israel"],["IT","Italy"],["JM","Jamaica"],["JP","Japan"],["JO","Jordan"],["KZ","Kazakhstan"],["KE","Kenya"],["KI","Kiribati"],["KW","Kuwait"],["KG","Kyrgyzstan"],["LA","Laos"],["LV","Latvia"],["LB","Lebanon"],["LS","Lesotho"],["LR","Liberia"],["LY","Libya"],["LI","Liechtenstein"],["LT","Lithuania"],["LU","Luxembourg"],["MG","Madagascar"],["MW","Malawi"],["MY","Malaysia"],["MV","Maldives"],["ML","Mali"],["MT","Malta"],["MH","Marshall Islands"],["MR","Mauritania"],["MU","Mauritius"],["MX","Mexico"],["FM","Micronesia"],["MD","Moldova"],["MC","Monaco"],["MN","Mongolia"],["ME","Montenegro"],["MA","Morocco"],["MZ","Mozambique"],["MM","Myanmar"],["NA","Namibia"],["NR","Nauru"],["NP","Nepal"],["NL","Netherlands"],["NZ","New Zealand"],["NI","Nicaragua"],["NE","Niger"],["NG","Nigeria"],["MK","North Macedonia"],["NO","Norway"],["OM","Oman"],["PK","Pakistan"],["PW","Palau"],["PS","Palestine"],["PA","Panama"],["PG","Papua New Guinea"],["PY","Paraguay"],["PE","Peru"],["PH","Philippines"],["PL","Poland"],["PT","Portugal"],["QA","Qatar"],["RO","Romania"],["RU","Russia"],["RW","Rwanda"],["KN","Saint Kitts & Nevis"],["LC","Saint Lucia"],["VC","Saint Vincent & Grenadines"],["WS","Samoa"],["SM","San Marino"],["ST","São Tomé & Príncipe"],["SA","Saudi Arabia"],["SN","Senegal"],["RS","Serbia"],["SC","Seychelles"],["SL","Sierra Leone"],["SG","Singapore"],["SK","Slovakia"],["SI","Slovenia"],["SB","Solomon Islands"],["SO","Somalia"],["ZA","South Africa"],["KR","South Korea"],["SS","South Sudan"],["ES","Spain"],["LK","Sri Lanka"],["SD","Sudan"],["SR","Suriname"],["SE","Sweden"],["CH","Switzerland"],["SY","Syria"],["TW","Taiwan"],["TJ","Tajikistan"],["TZ","Tanzania"],["TH","Thailand"],["TL","Timor-Leste"],["TG","Togo"],["TO","Tonga"],["TT","Trinidad & Tobago"],["TN","Tunisia"],["TR","Türkiye"],["TM","Turkmenistan"],["TV","Tuvalu"],["UG","Uganda"],["UA","Ukraine"],["AE","United Arab Emirates"],["GB","United Kingdom"],["US","United States"],["UY","Uruguay"],["UZ","Uzbekistan"],["VU","Vanuatu"],["VE","Venezuela"],["VN","Vietnam"],["YE","Yemen"],["ZM","Zambia"],["ZW","Zimbabwe"]];
+  function flagEmoji(cc){ if(!cc||cc.length!==2)return ""; var A=127397; return cc.toUpperCase().replace(/[A-Z]/g,function(ch){return String.fromCodePoint(A+ch.charCodeAt(0));}); }
+  function fillCountrySelect(el,current){ if(!el)return; var h='<option value="">🌍 Prefer not to say</option>'; for(var i=0;i<COUNTRIES.length;i++){var c=COUNTRIES[i];h+='<option value="'+c[0]+'"'+(current===c[0]?" selected":"")+'>'+flagEmoji(c[0])+" "+c[1]+'</option>';} el.value=current||""; el.innerHTML=h; el.value=current||""; }
+  function parsePost(content){
+    var c=content||"", country=null, music=null;
+    var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
+    if(cm){ country=cm[1].toUpperCase(); c=c.replace(cm[0],""); }
+    var i=c.indexOf("[[MUSIC]]");
+    if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
+    return {caption:c.trim(), music:music, country:country};
+  }
+  function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
   function musicBtnHtml(url){
     var info=musicInfo(url);
     var label=(info.list?"Playlist on ":"Play on ")+info.name;
@@ -565,6 +588,7 @@
     $("nameRow").classList.toggle("hide",m!=="signup");
     $("dobRow").classList.toggle("hide",m!=="signup");
     $("agreeRow").classList.toggle("hide",m!=="signup");
+    var cr=$("countryRow"); if(cr){ cr.classList.toggle("hide",m!=="signup"); if(m==="signup") fillCountrySelect($("signupCountry"),$("signupCountry").value||""); }
     var fr=$("forgotRow"); if(fr) fr.classList.toggle("hide",m!=="login");
     var ab=$("agreeBox"); if(ab&&m!=="signup") ab.checked=false;
     $("goBtn").textContent=m==="signup"?"Create my account":"Log in";
@@ -663,13 +687,14 @@
     try{
       if(mode==="signup"){
         const name=$("name").value.trim(),dob=getDob();
+        const country=$("signupCountry")?$("signupCountry").value:"";
         if(!name){$("goBtn").disabled=false;return setMsg("Add your name.","err");}
         const age=ageFrom(dob);
         if(age===null){$("goBtn").disabled=false;return setMsg("Add your date of birth.","err");}
         if(age<13){$("goBtn").disabled=false;return setMsg("You need to be 13 or older to join.","err");}
         if(!$("agreeBox").checked){$("goBtn").disabled=false;return setMsg("Please agree to the Community Guidelines & Terms to join.","err");}
         setMsg("Creating your account…");
-        const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,dob:dob,agreed_terms:true,agreed_at:new Date().toISOString(),terms_version:"1.0"}}});
+        const {data,error}=await sb.auth.signUp({email,password,options:{data:{full_name:name,dob:dob,country:country||null,agreed_terms:true,agreed_at:new Date().toISOString(),terms_version:"1.0"}}});
         if(error)throw error;
         if(data.session) await enterApp(data.user);
         else {setMsg("Account created! Check your email to confirm, then log in.","ok");setMode("login");}
@@ -790,11 +815,11 @@
     const feed=$("feed");
     if(!posts.length){feed.innerHTML='<div class="empty">No moments yet.<br>Be the first to share something with the world. 🌍</div>';return;}
     feed.innerHTML=posts.map(function(p){
-      const nm=escapeHtml(p.author_name||"Someone");
+      const parsedM=parsePost(p.content||"");
+      const nm=escapeHtml(p.author_name||"Someone")+(parsedM.country?'<span class="flag">'+flagEmoji(parsedM.country)+'</span>':'');
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
-      const parsedM=parseMusic(p.content||"");
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
-      const music=parsedM.url?('<div class="musicWrap">'+musicEmbedHtml(parsedM.url)+'</div>'):'';
+      const music=parsedM.music?('<div class="musicWrap">'+musicEmbedHtml(parsedM.music)+'</div>'):'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
@@ -957,6 +982,8 @@
       }
       let finalContent=text;
       if(pendingMusic){ finalContent=(text?text+"\n":"")+"[[MUSIC]]"+pendingMusic; }
+      var cc=myCountry();
+      if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
       setAppMsg("Sharing…");
       const {error}=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:imageUrl});
       if(error)throw error;
@@ -1026,11 +1053,12 @@
     }catch(err){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">Couldn\'t load moments right now.</div>'; }
   }
   function connMomentCard(p){
-    var parsed=parseMusic(p.content||"");
+    var parsed=parsePost(p.content||"");
     var img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="openPhoto(this.src)" alt="moment" />':'';
     var body=(parsed.caption&&parsed.caption.trim())?'<div class="body">'+escapeHtml(parsed.caption)+'</div>':'';
-    var music=parsed.url?('<div class="musicWrap">'+musicEmbedHtml(parsed.url)+'</div>'):'';
-    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+escapeHtml(p.author_name||"Someone")+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+body+music+connReactBtn(p.id)+'</div>';
+    var music=parsed.music?('<div class="musicWrap">'+musicEmbedHtml(parsed.music)+'</div>'):'';
+    var nm=escapeHtml(p.author_name||"Someone")+(parsed.country?'<span class="flag">'+flagEmoji(parsed.country)+'</span>':'');
+    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+body+music+connReactBtn(p.id)+'</div>';
   }
   function closeConnectionsPage(){
     $("connectionsPage").classList.add("hide");
@@ -1080,7 +1108,19 @@
   $("cameraInput").addEventListener("change",onFilePicked);
 
   function setProfileMsg(t,cls){const e=$("profileMsg");if(e){e.textContent=t;e.className="appMsg"+(cls?" "+cls:"");}}
-  function loadProfile(){ if(!currentUser)return; $("profileName").value = myProfile.full_name || myName(); applyMyAvatar(); setProfileMsg(""); loadMyPhotos(); }
+  function loadProfile(){ if(!currentUser)return; $("profileName").value = myProfile.full_name || myName(); fillCountrySelect($("profileCountry"),myCountry()); applyMyAvatar(); setProfileMsg(""); loadMyPhotos(); }
+  async function saveCountry(){
+    if(!currentUser)return;
+    var cc=$("profileCountry").value||"";
+    setProfileMsg("Saving…");
+    try{
+      var r=await sb.auth.updateUser({data:{country:cc||null}});
+      if(r.error)throw r.error;
+      if(!currentUser.user_metadata) currentUser.user_metadata={};
+      currentUser.user_metadata.country=cc||null;
+      setProfileMsg(cc?("Saved "+flagEmoji(cc)):"Saved");
+    }catch(err){ setProfileMsg(err.message||"Couldn't save country.","err"); }
+  }
   function renderGrid(el,posts){
     if(!el)return;
     var withImg=(posts||[]).filter(function(p){return p.image_url;});
