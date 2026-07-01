@@ -159,6 +159,17 @@
   .act svg.ic{width:28px;height:28px;display:block}
   .musicWrap{margin:2px 0 8px}
   .spotifyEmbed{width:100%;border:0;border-radius:12px;display:block}
+  .connPage{position:fixed;inset:0;z-index:150;overflow-y:auto;-webkit-overflow-scrolling:touch;background:radial-gradient(120% 90% at 60% 15%,#0d3f21 0%,#08260f 48%,#04110a 100%);color:#eafff0}
+  .connNet{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;opacity:.55}
+  .connBar{position:sticky;top:0;display:flex;align-items:center;gap:12px;padding:16px;background:linear-gradient(to bottom,rgba(4,17,10,.92),rgba(4,17,10,0));backdrop-filter:blur(4px);z-index:2}
+  .connBack{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.28);border-radius:20px;padding:9px 15px;font-family:inherit;font-weight:600;cursor:pointer}
+  .connTitle{font-weight:700;font-size:1.3rem}
+  .connBody{position:relative;z-index:2;max-width:640px;margin:0 auto;padding:6px 16px 44px}
+  .connList .person{background:rgba(4,20,11,.6);border:1px solid rgba(120,220,150,.28);backdrop-filter:blur(3px)}
+  .connMore{margin-top:22px;text-align:center;color:rgba(255,255,255,.55);font-size:.85rem;border:1px dashed rgba(160,230,180,.35);border-radius:16px;padding:26px 16px}
+  .connEmpty{text-align:center;color:rgba(255,255,255,.72);padding:30px 16px;line-height:1.5}
+  .connOpen{cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+  .connArrow{color:#7dd492}
   .musicBtn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:24px;background:var(--mc,#8ab4f8);color:#fff;font-weight:700;font-size:.9rem;text-decoration:none;box-shadow:0 2px 10px rgba(0,0,0,.25)}
   .musicBtn .mbi{font-size:.95rem}
   .musicBar{display:flex;gap:8px;margin-top:10px}
@@ -451,6 +462,7 @@
   let currentUser = null;
   let pendingFile = null;
   let pendingMusic = null;
+  let lastConnected = [];
   function musicInfo(url){
     var u=(url||"").toLowerCase();
     var list=u.indexOf("playlist")>=0||u.indexOf("/album")>=0||u.indexOf("list=")>=0||u.indexOf("/sets/")>=0;
@@ -664,6 +676,7 @@
     if(!currentUser) return;
     var pv=$("photoViewer"); if(pv) pv.classList.add("hide");
     var ps=$("photoSheet"); if(ps) ps.classList.add("hide");
+    var cp=$("connectionsPage"); if(cp) cp.classList.add("hide");
     document.body.style.overflow="";
     eaSub=false;
     showViewInternal("feed");
@@ -904,6 +917,21 @@
   }
 
   /* people */
+  function openConnectionsPage(){
+    var list=$("connList");
+    if(lastConnected&&lastConnected.length){
+      list.innerHTML=lastConnected.map(function(x){return personRow(x.p,'<span class="pill linked">View ›</span>',"closeConnectionsPage();viewUser('"+x.p.id+"')");}).join("");
+    } else {
+      list.innerHTML='<div class="connEmpty">No connections yet.<br>Connect with people on the People tab. 🌍</div>';
+    }
+    $("connectionsPage").classList.remove("hide");
+    document.body.style.overflow="hidden";
+    try{ history.pushState({conn:true},""); }catch(e){}
+  }
+  function closeConnectionsPage(){
+    $("connectionsPage").classList.add("hide");
+    document.body.style.overflow="";
+  }
   async function loadPeople(){
     if(!currentUser)return;setPeopleMsg("");
     try{
@@ -931,7 +959,8 @@
   function renderPeople(requests,connected,discover){
     let rs="";if(requests.length){rs='<h3>Requests &middot; '+requests.length+'</h3>'+requests.map(function(x){return personRow(x.p,'<button class="pbtn accept" onclick="acceptRequest(\''+x.c.id+'\')">Accept</button>');}).join("");}
     $("requestsSection").innerHTML=rs;
-    let cs="";if(connected.length){cs='<h3>Your connections &middot; '+connected.length+'</h3>'+connected.map(function(x){return personRow(x.p,'<span class="pill linked">View ›</span>',"viewUser('"+x.p.id+"')");}).join("");}
+    lastConnected=connected.slice();
+    let cs="";if(connected.length){cs='<h3 class="connOpen" onclick="openConnectionsPage()">Your connections &middot; '+connected.length+' <span class="connArrow">›</span></h3>'+connected.map(function(x){return personRow(x.p,'<span class="pill linked">View ›</span>',"viewUser('"+x.p.id+"')");}).join("");}
     $("connectionsSection").innerHTML=cs;
     let ds='<h3>Discover people</h3>';
     if(!discover.length){ds+='<div class="empty">No one else here yet.<br>Invite a friend to join Earthafying. 🌍</div>';}
@@ -1321,6 +1350,40 @@
       <stop offset="0" stop-color="#2bbf86"/><stop offset="1" stop-color="#1f86d6"/>
     </linearGradient>
   </defs></svg>
+  <div id="connectionsPage" class="connPage hide">
+    <svg class="connNet" viewBox="0 0 400 700" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g stroke="#2ecc71" stroke-width="0.7" opacity="0.3">
+        <line x1="120" y1="70" x2="210" y2="110"/><line x1="210" y1="110" x2="300" y2="60"/>
+        <line x1="300" y1="60" x2="360" y2="140"/><line x1="120" y1="70" x2="40" y2="120"/>
+        <line x1="120" y1="70" x2="180" y2="200"/><line x1="210" y1="110" x2="180" y2="200"/>
+        <line x1="360" y1="140" x2="350" y2="260"/><line x1="180" y1="200" x2="280" y2="210"/>
+        <line x1="80" y1="220" x2="180" y2="200"/><line x1="180" y1="200" x2="150" y2="330"/>
+        <line x1="280" y1="210" x2="250" y2="320"/><line x1="350" y1="260" x2="330" y2="370"/>
+        <line x1="150" y1="330" x2="250" y2="320"/><line x1="150" y1="330" x2="90" y2="460"/>
+        <line x1="250" y1="320" x2="300" y2="470"/><line x1="90" y1="460" x2="200" y2="450"/>
+        <line x1="200" y1="450" x2="300" y2="470"/><line x1="200" y1="450" x2="160" y2="600"/>
+        <line x1="300" y1="470" x2="260" y2="590"/><line x1="160" y1="600" x2="60" y2="590"/>
+        <line x1="260" y1="590" x2="340" y2="630"/><line x1="90" y1="460" x2="50" y2="340"/>
+      </g>
+      <g fill="#33d17a">
+        <circle cx="40" cy="120" r="3"/><circle cx="120" cy="70" r="5"/><circle cx="210" cy="110" r="3"/>
+        <circle cx="300" cy="60" r="4"/><circle cx="360" cy="140" r="5"/><circle cx="80" cy="220" r="4"/>
+        <circle cx="180" cy="200" r="6"/><circle cx="280" cy="210" r="3"/><circle cx="350" cy="260" r="4"/>
+        <circle cx="50" cy="340" r="3"/><circle cx="150" cy="330" r="4"/><circle cx="250" cy="320" r="5"/>
+        <circle cx="330" cy="370" r="3"/><circle cx="90" cy="460" r="5"/><circle cx="200" cy="450" r="3"/>
+        <circle cx="300" cy="470" r="4"/><circle cx="160" cy="600" r="5"/><circle cx="260" cy="590" r="3"/>
+        <circle cx="340" cy="630" r="4"/><circle cx="60" cy="590" r="4"/>
+      </g>
+    </svg>
+    <div class="connBar">
+      <button class="connBack" onclick="closeConnectionsPage()">← Back</button>
+      <div class="connTitle">Your Connections</div>
+    </div>
+    <div class="connBody">
+      <div class="connList" id="connList"></div>
+      <div class="connMore">More coming here soon 🌱</div>
+    </div>
+  </div>
   <div id="txtEditor" class="txtEditor hide">
     <div class="te-hint">+ Text to add words · drag to move · pinch with two fingers to resize</div>
     <div class="te-stage" id="teStage">
