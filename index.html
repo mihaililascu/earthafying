@@ -106,6 +106,8 @@
   .pulseGrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block}
   .pulseNote{margin-top:8px;color:var(--muted);font-size:.82rem}
   .ubio{margin-top:6px;color:var(--muted);font-size:.92rem;line-height:1.4;max-width:480px}
+  .signupNote{margin-top:10px;color:var(--muted);font-size:.8rem;line-height:1.5}
+  .signupNote a{color:var(--amber);text-decoration:none}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
   .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
@@ -357,6 +359,7 @@
     </div>
     <div id="agreeRow" class="hide">
       <label class="agreeLabel"><input type="checkbox" id="agreeBox" /> <span>I'm 13 or older and I agree to Earthafying's <a href="#" onclick="openTerms(event)">Community Guidelines &amp; Terms</a>.</span></label>
+      <div class="signupNote">We only ask for what the age check needs. No ads, no selling your data — ever. <a href="#" onclick="openPrivacy(event)">Your data, plainly explained ›</a></div>
     </div>
     <button class="go" id="goBtn" onclick="submitAuth()">Log in</button>
     <div class="msg" id="msg" aria-live="polite"></div>
@@ -1149,6 +1152,8 @@
   }
   function openHelp(){ var o=$("helpOverlay"); if(o) o.classList.remove("hide"); }
   function closeHelp(){ var o=$("helpOverlay"); if(o) o.classList.add("hide"); }
+  function openPrivacy(e){ if(e&&e.preventDefault)e.preventDefault(); var o=$("privacyOverlay"); if(o) o.classList.remove("hide"); }
+  function closePrivacy(){ var o=$("privacyOverlay"); if(o) o.classList.add("hide"); }
   var notifItems=[];
   var viewedUserId=null;
   function myMuted(){ var m=(currentUser&&currentUser.user_metadata&&currentUser.user_metadata.muted)||[]; return Array.isArray(m)?m:[]; }
@@ -1725,6 +1730,38 @@
       </div>
     </div>
   </div>
+  <div id="privacyOverlay" class="termsOverlay hide">
+    <div class="termsSheet">
+      <div class="termsHead"><h2>🔒 Privacy &amp; Safety</h2><button class="termsClose" onclick="closePrivacy()">✕</button></div>
+      <div class="termsBody">
+        <p><b>Your data, plainly explained.</b> No legal fog — this is exactly what Earthafying does and doesn't do with your information.</p>
+        <h3>What we ask for</h3>
+        <ul>
+          <li><b>Your name</b> — so people know who's sharing.</li>
+          <li><b>Your email and a password</b> — to sign you in. Your password is scrambled (hashed) before it's stored, so nobody — not even us — can ever read it.</li>
+          <li><b>Your date of birth</b> — only to check you're 13 or older. It's never shown to anyone.</li>
+          <li><b>Your country</b> — optional, and only if you choose it, shown as a small flag by your name.</li>
+        </ul>
+        <p>That's it. We deliberately ask for as little as possible — the less we hold, the less there is to worry about.</p>
+        <h3>What's public</h3>
+        <p>Earthafying is an open, public space by design. Your posts, photos, comments, appreciations, your name, and your optional flag can be seen by other users. Please only share what you're happy for the world to see.</p>
+        <h3>What we never do</h3>
+        <ul>
+          <li>No ads.</li>
+          <li>We never sell your data — to anyone, ever.</li>
+          <li>No tracking you around the internet.</li>
+          <li>No private messaging exists here — that's a deliberate child-safety choice.</li>
+        </ul>
+        <h3>How it's protected</h3>
+        <p>Everything travels over an encrypted connection (the padlock in your browser). Accounts, posts, and photos are stored with Supabase, a professional database service, and the site is served by Vercel. When someone shares music, the player comes from that platform (like Spotify), and our lettering loads from Google Fonts — those services see the usual technical basics (like your device's address) when your browser loads them, the same as on most websites.</p>
+        <h3>Your rights</h3>
+        <p>Your data is yours. You can see it, correct it (in the Me tab), or have your whole account and everything in it deleted — just email us via Help &amp; Support and it will be done within 30 days, no questions asked.</p>
+        <h3>An honest note</h3>
+        <p>No website on Earth can truthfully promise "100% secure" — so we won't. What we promise instead: we keep what we hold small on purpose, we protect it with proper tools, and if anything ever goes wrong that affects you, we'll tell you honestly and quickly.</p>
+        <p class="tnote">Questions? Tap the ? icon and write to us — a human reads every message.</p>
+      </div>
+    </div>
+  </div>
   <div id="editOverlay" class="termsOverlay hide">
     <div class="termsSheet">
       <div class="termsHead"><h2>Edit your post</h2><button class="termsClose" onclick="closeEdit()">✕</button></div>
@@ -1750,6 +1787,7 @@
         <div class="helpMenu">
           <a class="helpItem" href="mailto:mihailascu05@gmail.com?subject=Earthafying%20-%20Contact"><span class="hi-ic">✉️</span><span class="hi-tx"><b>Contact us</b><span>Send a message or a question</span></span></a>
           <a class="helpItem" href="mailto:mihailascu05@gmail.com?subject=Earthafying%20-%20Report%20a%20problem"><span class="hi-ic">⚠️</span><span class="hi-tx"><b>Report a problem</b><span>Flag something that isn't right</span></span></a>
+          <button class="helpItem" onclick="closeHelp();openPrivacy(event)"><span class="hi-ic">🔒</span><span class="hi-tx"><b>Privacy &amp; Safety</b><span>Your data, plainly explained</span></span></button>
           <button class="helpItem" onclick="closeHelp();openTerms(event)"><span class="hi-ic">📄</span><span class="hi-tx"><b>Community Guidelines &amp; Terms</b><span>How we keep Earthafying kind &amp; safe</span></span></button>
         </div>
       </div>
