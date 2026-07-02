@@ -97,6 +97,15 @@
   .mutePill{margin-top:10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:8px 16px;font-family:inherit;font-weight:600;font-size:.85rem;cursor:pointer}
   .mutePill.on{background:rgba(255,111,97,.14);border-color:rgba(255,111,97,.5);color:var(--coral)}
   .editPost{color:var(--muted)!important;border-color:var(--border)!important;background:transparent!important;margin-right:6px}
+  .pulseActions{margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .pulseBtn{background:linear-gradient(120deg,var(--coral),var(--amber));border:none;color:#fff;border-radius:20px;padding:9px 16px;font-family:inherit;font-weight:700;font-size:.88rem;cursor:pointer}
+  .pulseBtn:active{transform:scale(.98)}
+  .pulseIn{color:var(--leaf);font-weight:700;font-size:.9rem}
+  .pulseGallery{margin-top:12px}
+  .pulseGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+  .pulseGrid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:zoom-in;display:block}
+  .pulseNote{margin-top:8px;color:var(--muted);font-size:.82rem}
+  .ubio{margin-top:6px;color:var(--muted);font-size:.92rem;line-height:1.4;max-width:480px}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
   .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
@@ -429,9 +438,11 @@
   </div>
 
   <div id="feedView">
-    <div class="moment">
-      <div class="ml">🌍 Today's moment</div>
+    <div class="moment" id="pulseCard">
+      <div class="ml">🌍 World Pulse · one prompt, everywhere, today</div>
       <div class="mp" id="momentPrompt">&nbsp;</div>
+      <div id="pulseActions" class="pulseActions"></div>
+      <div id="pulseGallery" class="pulseGallery hide"></div>
     </div>
     <div class="compose">
       <div class="who">
@@ -450,6 +461,7 @@
         <button onclick="attachMusic()">Attach</button>
       </div>
       <div class="musicChip hide" id="musicChip"><span id="musicChipText"></span> <button onclick="clearMusic()" title="Remove">✕</button></div>
+      <div class="musicChip hide" id="pulseChip"><span>🌍 Joining today's World Pulse</span> <button onclick="clearPulse()" title="Remove">✕</button></div>
       <div class="row">
         <div class="leftrow">
           <button class="photoBtn" id="photoBtn">📷 Photo</button>
@@ -493,6 +505,9 @@
       <label class="profLabel" for="profileName">Your name</label>
       <input id="profileName" class="profInput" maxlength="40" placeholder="Your name" />
       <button class="profSave" onclick="saveProfileName()">Save name</button>
+      <label class="profLabel" for="profileBio">About you <span class="opt">(optional)</span></label>
+      <input id="profileBio" class="profInput" maxlength="120" placeholder="One line about you 🌱" />
+      <button class="profSave" onclick="saveBio()">Save bio</button>
       <label class="profLabel" for="profileCountry">Where you're posting from <span class="opt">(optional)</span></label>
       <select id="profileCountry" class="ctySelect profInput"></select>
       <button class="profSave" onclick="saveCountry()">Save country</button>
@@ -508,6 +523,7 @@
       <div class="avatar big" id="userAvatar" onclick="openAvatar(this)">E</div>
       <div class="uname" id="userName">Someone</div>
       <div class="usub" id="userSub"></div>
+      <div class="ubio" id="userBio"></div>
       <button id="muteBtn" class="mutePill hide" onclick="toggleMute()"></button>
     </div>
     <h3 class="gridHead">Photos</h3>
@@ -563,12 +579,14 @@
   function flagEmoji(cc){ if(!cc||cc.length!==2)return ""; var A=127397; return cc.toUpperCase().replace(/[A-Z]/g,function(ch){return String.fromCodePoint(A+ch.charCodeAt(0));}); }
   function fillCountrySelect(el,current){ if(!el)return; var h='<option value="">🌍 Prefer not to say</option>'; for(var i=0;i<COUNTRIES.length;i++){var c=COUNTRIES[i];h+='<option value="'+c[0]+'"'+(current===c[0]?" selected":"")+'>'+flagEmoji(c[0])+" "+c[1]+'</option>';} el.value=current||""; el.innerHTML=h; el.value=current||""; }
   function parsePost(content){
-    var c=content||"", country=null, music=null;
+    var c=content||"", country=null, music=null, pulse=null;
+    var wm=c.match(/\[\[WP:(\d{8})\]\]/);
+    if(wm){ pulse=wm[1]; c=c.replace(wm[0],""); }
     var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
     if(cm){ country=cm[1].toUpperCase(); c=c.replace(cm[0],""); }
     var i=c.indexOf("[[MUSIC]]");
     if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
-    return {caption:c.trim(), music:music, country:country};
+    return {caption:c.trim(), music:music, country:country, pulse:pulse};
   }
   function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
   var COUNTRY_MAP=null;
@@ -680,10 +698,47 @@
     "Show us where you'd sit to watch the world go by.",
     "Share something from your world that you wish more people could see."
   ];
+  function pulseDayNum(){ return Math.floor(Date.now()/86400000); }
+  function pulseKey(){ var d=new Date(); return ""+d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,"0")+String(d.getUTCDate()).padStart(2,"0"); }
   function setMoment(){
-    const now=new Date();
-    const day=Math.floor((now-new Date(now.getFullYear(),0,0))/86400000);
-    $("momentPrompt").textContent=DAILY_PROMPTS[day % DAILY_PROMPTS.length];
+    $("momentPrompt").textContent=DAILY_PROMPTS[pulseDayNum() % DAILY_PROMPTS.length];
+    pulseState();
+  }
+  var pendingPulse=false, pulsePosted=false;
+  function pulseJoin(){
+    pendingPulse=true;
+    var c=$("pulseChip"); if(c)c.classList.remove("hide");
+    var t=$("postText");
+    if(t){ try{ t.scrollIntoView({behavior:"smooth",block:"center"}); }catch(e){} t.focus(); }
+  }
+  function clearPulse(){ pendingPulse=false; var c=$("pulseChip"); if(c)c.classList.add("hide"); }
+  async function pulseState(){
+    var a=$("pulseActions"); if(!a||!currentUser)return;
+    try{
+      var r=await sb.from("posts").select("id").eq("user_id",currentUser.id).like("content","%[[WP:"+pulseKey()+"]]%").limit(1);
+      pulsePosted=!!(r.data&&r.data.length);
+    }catch(e){ pulsePosted=false; }
+    if(pulsePosted){
+      a.innerHTML='<span class="pulseIn">✓ You\'re in today\'s Pulse</span><button class="pulseBtn" onclick="pulseToggleGallery()">See the world\'s answers</button>';
+    } else {
+      a.innerHTML='<button class="pulseBtn" onclick="pulseJoin()">📸 Share yours to unlock today\'s world</button>';
+      var g=$("pulseGallery"); if(g){ g.classList.add("hide"); g.innerHTML=""; }
+    }
+  }
+  async function pulseToggleGallery(){
+    var g=$("pulseGallery"); if(!g)return;
+    if(!g.classList.contains("hide")){ g.classList.add("hide"); return; }
+    g.classList.remove("hide"); g.innerHTML='<div class="gridEmpty">Loading…</div>';
+    try{
+      var r=await sb.from("posts").select("*").like("content","%[[WP:"+pulseKey()+"]]%").order("created_at",{ascending:false}).limit(60);
+      var ps=(r.data||[]).filter(function(p){return !isMuted(p.user_id);});
+      if(!ps.length){ g.innerHTML='<div class="gridEmpty">No answers yet — yours might be the first 🌍</div>'; return; }
+      var imgs=ps.filter(function(p){return p.image_url;});
+      var html='<div class="pulseGrid">'+imgs.map(function(p){return '<img src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="openPhoto(this.src)" alt="pulse answer" />';}).join("")+'</div>';
+      var extra=ps.length-imgs.length;
+      if(extra>0) html+='<div class="pulseNote">+'+extra+' written '+(extra===1?'answer':'answers')+' in the feed</div>';
+      g.innerHTML=html;
+    }catch(e){ g.innerHTML='<div class="gridEmpty">Couldn\'t load right now.</div>'; }
   }
   function timeAgo(iso){const s=Math.floor((Date.now()-new Date(iso).getTime())/1000);if(s<60)return "just now";const m=Math.floor(s/60);if(m<60)return m+"m ago";const h=Math.floor(m/60);if(h<24)return h+"h ago";const d=Math.floor(h/24);if(d<7)return d+"d ago";return new Date(iso).toLocaleDateString();}
 
@@ -754,7 +809,7 @@
     switchView("feed");setMoment();
     window.scrollTo(0,0); startAutoGlide();
     try{ await sb.from("profiles").upsert({id:user.id,full_name:name}); }catch(e){}
-    try{ const pr=await sb.from("profiles").select("full_name,avatar_url").eq("id",user.id).single(); if(pr.data){ myProfile.full_name=pr.data.full_name||name; myProfile.avatar_url=pr.data.avatar_url||null; } }catch(e){}
+    try{ const pr=await sb.from("profiles").select("*").eq("id",user.id).single(); if(pr.data){ myProfile.full_name=pr.data.full_name||name; myProfile.avatar_url=pr.data.avatar_url||null; myProfile.bio=pr.data.bio||""; } }catch(e){}
     applyMyAvatar();
     loadFeed();loadPeople();notifLoad();
   }
@@ -982,6 +1037,7 @@
     var content=text;
     if(parsed.music){ content=(text?text+"\n":"")+"[[MUSIC]]"+parsed.music; }
     if(parsed.country){ content="[[C:"+parsed.country+"]]"+content; }
+    if(parsed.pulse){ content="[[WP:"+parsed.pulse+"]]"+content; }
     try{
       var r=await sb.from("posts").update({content:content}).eq("id",editingPostId).eq("user_id",currentUser.id);
       if(r.error)throw r.error;
@@ -1047,11 +1103,13 @@
       if(pendingMusic){ finalContent=(text?text+"\n":"")+"[[MUSIC]]"+pendingMusic; }
       var cc=myCountry();
       if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
+      if(pendingPulse){ finalContent="[[WP:"+pulseKey()+"]]"+finalContent; }
       setAppMsg("Sharing…");
       const {error}=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:imageUrl});
       if(error)throw error;
-      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();setAppMsg("");
+      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();clearPulse();setAppMsg("");
       await loadFeed();
+      pulseState();
     }catch(err){setAppMsg("Couldn't share: "+(err.message||err),"err");}
     $("shareBtn").disabled=false;
   }
@@ -1245,7 +1303,23 @@
   $("cameraInput").addEventListener("change",onFilePicked);
 
   function setProfileMsg(t,cls){const e=$("profileMsg");if(e){e.textContent=t;e.className="appMsg"+(cls?" "+cls:"");}}
-  function loadProfile(){ if(!currentUser)return; $("profileName").value = myProfile.full_name || myName(); fillCountrySelect($("profileCountry"),myCountry()); applyMyAvatar(); setProfileMsg(""); loadMyPhotos(); }
+  function loadProfile(){ if(!currentUser)return; $("profileName").value = myProfile.full_name || myName(); var b=$("profileBio"); if(b)b.value=myProfile.bio||""; fillCountrySelect($("profileCountry"),myCountry()); applyMyAvatar(); setProfileMsg(""); loadMyPhotos(); }
+  async function saveBio(){
+    if(!currentUser)return;
+    var v=$("profileBio").value.trim();
+    setProfileMsg("Saving…");
+    try{
+      var r=await sb.from("profiles").update({bio:v||null}).eq("id",currentUser.id);
+      if(r.error)throw r.error;
+      myProfile.bio=v;
+      setProfileMsg("Bio saved 🌱");
+    }catch(err){
+      var m=(err&&err.message)||"";
+      if(m.toLowerCase().indexOf("column")>=0||m.toLowerCase().indexOf("bio")>=0){
+        setProfileMsg("One-time setup needed: in Supabase, open Table Editor → profiles → New column → name it 'bio', type 'text' → Save. Then try again.","err");
+      } else { setProfileMsg(m||"Couldn't save bio.","err"); }
+    }
+  }
   async function saveCountry(){
     if(!currentUser)return;
     var cc=$("profileCountry").value||"";
@@ -1289,15 +1363,17 @@
     setAvatarEl($("userAvatar"),null,"E");
     $("userName").textContent="…";
     $("userSub").textContent="";
+    $("userBio").textContent="";
     muteBtnState();
     window.scrollTo(0,0);
     var el=$("userGrid"); el.innerHTML='<div class="gridEmpty">Loading…</div>';
     try{
-      var pr=await sb.from("profiles").select("full_name,avatar_url").eq("id",id).single();
+      var pr=await sb.from("profiles").select("*").eq("id",id).single();
       var nm=(pr.data&&pr.data.full_name)||"Someone";
       var av=(pr.data&&pr.data.avatar_url)||null;
       setAvatarEl($("userAvatar"),av,nm);
       $("userName").textContent=nm;
+      $("userBio").textContent=(pr.data&&pr.data.bio)||"";
       var res=await sb.from("posts").select("id,image_url,created_at").eq("user_id",id).order("created_at",{ascending:false}).limit(120);
       if(res.error)throw res.error;
       var n=(res.data||[]).filter(function(p){return p.image_url;}).length;
