@@ -87,6 +87,13 @@
   .helpIcon{width:38px;height:38px;flex:none;display:flex;align-items:center;justify-content:center;background:transparent;border:1px solid var(--border);border-radius:50%;color:var(--muted);cursor:pointer;padding:0}
   .helpIcon svg{width:22px;height:22px}
   .helpIcon:active{transform:scale(.95)}
+  .notifBadge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:var(--coral);color:#fff;font-size:.68rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .notifBadge.hide{display:none}
+  .notifItem{display:flex;align-items:flex-start;gap:12px;padding:12px 2px;border-bottom:1px solid var(--border)}
+  .notifItem:last-child{border-bottom:none}
+  .nIc{font-size:1.15rem;flex:none;margin-top:1px}
+  .nTx{line-height:1.45;font-size:.94rem}
+  .nTime{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
   .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
@@ -396,6 +403,7 @@
   <div class="topbar">
     <div class="left"><span class="dot"></span><span class="name">Earthafying</span></div>
     <div class="tbRight">
+      <button class="helpIcon" onclick="openNotifs()" aria-label="Notifications" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="notifBadge" class="notifBadge hide">0</span></button>
       <button class="helpIcon" onclick="openHelp()" aria-label="Help and support"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/><path d="M9.8 9.4a2.2 2.2 0 0 1 4.2.9c0 1.5-2 1.8-2 3"/><circle cx="12" cy="16.3" r=".6" fill="currentColor" stroke="none"/></svg></button>
       <button class="logout" onclick="logout()">Log out</button>
     </div>
@@ -744,7 +752,7 @@
     try{ await sb.from("profiles").upsert({id:user.id,full_name:name}); }catch(e){}
     try{ const pr=await sb.from("profiles").select("full_name,avatar_url").eq("id",user.id).single(); if(pr.data){ myProfile.full_name=pr.data.full_name||name; myProfile.avatar_url=pr.data.avatar_url||null; } }catch(e){}
     applyMyAvatar();
-    loadFeed();loadPeople();
+    loadFeed();loadPeople();notifLoad();
   }
 
   var eaSub=false; /* true when showing a sub-view (People / Me / someone's profile) with a pushed history entry */
@@ -1048,6 +1056,54 @@
   }
   function openHelp(){ var o=$("helpOverlay"); if(o) o.classList.remove("hide"); }
   function closeHelp(){ var o=$("helpOverlay"); if(o) o.classList.add("hide"); }
+  var notifItems=[];
+  function notifSeenKey(){ return "eaNotifSeen_"+(currentUser?currentUser.id:""); }
+  async function notifLoad(){
+    if(!currentUser) return;
+    try{
+      var pr=await sb.from("posts").select("id").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
+      var ids=(pr.data||[]).map(function(p){return p.id;});
+      if(!ids.length){ notifItems=[]; notifBadge(); return; }
+      var lr=await sb.from("likes").select("*").in("post_id",ids);
+      var cr=await sb.from("comments").select("*").in("post_id",ids);
+      var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id;});
+      var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id;});
+      var need={}; likes.forEach(function(l){need[l.user_id]=1;});
+      var nameMap={}; var idList=Object.keys(need);
+      if(idList.length){ try{ var pf=await sb.from("profiles").select("id,full_name").in("id",idList); (pf.data||[]).forEach(function(p){nameMap[p.id]=p.full_name;}); }catch(e){} }
+      var items=[];
+      likes.forEach(function(l){ items.push({t:"like",name:nameMap[l.user_id]||"Someone",time:l.created_at||null}); });
+      comms.forEach(function(c){ items.push({t:"comment",name:c.author_name||"Someone",text:c.content||"",time:c.created_at||null}); });
+      items.sort(function(a,b){ return new Date(b.time||0)-new Date(a.time||0); });
+      notifItems=items.slice(0,30);
+    }catch(e){ notifItems=[]; }
+    notifBadge();
+  }
+  function notifUnseen(){
+    var seen=0; try{ seen=Date.parse(localStorage.getItem(notifSeenKey())||"")||0; }catch(e){}
+    var n=0;
+    for(var i=0;i<notifItems.length;i++){ var t=notifItems[i].time?Date.parse(notifItems[i].time):0; if(t>seen)n++; }
+    return n;
+  }
+  function notifBadge(){ var b=$("notifBadge"); if(!b)return; var n=notifUnseen(); b.textContent=n>9?"9+":String(n); b.classList.toggle("hide",n===0); }
+  function openNotifs(){
+    var l=$("notifList");
+    if(notifItems.length){
+      l.innerHTML=notifItems.map(function(it){
+        var time=it.time?('<span class="nTime">'+timeAgo(it.time)+'</span>'):'';
+        if(it.t==="like") return '<div class="notifItem"><span class="nIc">💚</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> appreciated your post'+time+'</span></div>';
+        var txt=it.text.length>60?it.text.slice(0,60)+"…":it.text;
+        return '<div class="notifItem"><span class="nIc">💬</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> commented: “'+escapeHtml(txt)+'”'+time+'</span></div>';
+      }).join("");
+    } else {
+      l.innerHTML='<div class="notifItem"><span class="nIc">🌍</span><span class="nTx">Nothing yet.<br>When people appreciate or comment on your posts, it shows here.</span></div>';
+    }
+    $("notifOverlay").classList.remove("hide");
+    try{ localStorage.setItem(notifSeenKey(),new Date().toISOString()); }catch(e){}
+    var b=$("notifBadge"); if(b)b.classList.add("hide");
+    notifLoad();
+  }
+  function closeNotifs(){ $("notifOverlay").classList.add("hide"); }
   function openConnectionsPage(){
     var list=$("connList");
     if(lastConnected&&lastConnected.length){
@@ -1530,6 +1586,12 @@
         <button class="go" onclick="submitNewPassword()">Save new password</button>
         <div class="msg" id="pwResetMsg" aria-live="polite"></div>
       </div>
+    </div>
+  </div>
+  <div id="notifOverlay" class="termsOverlay hide">
+    <div class="termsSheet">
+      <div class="termsHead"><h2>Notifications</h2><button class="termsClose" onclick="closeNotifs()">✕</button></div>
+      <div class="termsBody" id="notifList"></div>
     </div>
   </div>
   <div id="helpOverlay" class="termsOverlay hide">
