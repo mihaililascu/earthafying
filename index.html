@@ -96,6 +96,7 @@
   .nTime{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
   .mutePill{margin-top:10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:8px 16px;font-family:inherit;font-weight:600;font-size:.85rem;cursor:pointer}
   .mutePill.on{background:rgba(255,111,97,.14);border-color:rgba(255,111,97,.5);color:var(--coral)}
+  .editPost{color:var(--muted)!important;border-color:var(--border)!important;background:transparent!important;margin-right:6px}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
   .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
@@ -847,6 +848,7 @@
     const feed=$("feed");
     if(!posts.length){feed.innerHTML='<div class="empty">No moments yet.<br>Be the first to share something with the world. 🌍</div>';return;}
     feed.innerHTML=posts.map(function(p){
+      state.postById=state.postById||{}; state.postById[p.id]=p;
       const parsedM=parsePost(p.content||"");
       const nm=escapeHtml(p.author_name||"Someone")+flagTag(parsedM.country);
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
@@ -855,6 +857,7 @@
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
+        (p.user_id===currentUser.id?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
         img+body+music+
@@ -958,6 +961,34 @@
     }
   }
 
+  var editingPostId=null;
+  function editPost(id){
+    var p=state.postById&&state.postById[id];
+    if(!p||p.user_id!==currentUser.id)return;
+    editingPostId=id;
+    $("editText").value=parsePost(p.content||"").caption;
+    $("editMsg").textContent="";
+    $("editOverlay").classList.remove("hide");
+    $("editText").focus();
+  }
+  function closeEdit(){ editingPostId=null; $("editOverlay").classList.add("hide"); }
+  async function savePostEdit(){
+    if(!editingPostId||!currentUser)return;
+    var p=state.postById&&state.postById[editingPostId];
+    if(!p)return;
+    var parsed=parsePost(p.content||"");
+    var text=$("editText").value.trim();
+    if(!text&&!p.image_url&&!parsed.music){ $("editMsg").textContent="A post needs some text, a photo, or music."; return; }
+    var content=text;
+    if(parsed.music){ content=(text?text+"\n":"")+"[[MUSIC]]"+parsed.music; }
+    if(parsed.country){ content="[[C:"+parsed.country+"]]"+content; }
+    try{
+      var r=await sb.from("posts").update({content:content}).eq("id",editingPostId).eq("user_id",currentUser.id);
+      if(r.error)throw r.error;
+      closeEdit();
+      await loadFeed();
+    }catch(err){ $("editMsg").textContent=err.message||"Couldn't save changes."; }
+  }
   async function deletePost(id){
     if(!isAdmin())return;
     if(!confirm("Remove this post for everyone? This can't be undone."))return;
@@ -1615,6 +1646,18 @@
         <input id="newPw" type="password" placeholder="New password (at least 6 characters)" autocomplete="new-password" />
         <button class="go" onclick="submitNewPassword()">Save new password</button>
         <div class="msg" id="pwResetMsg" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+  <div id="editOverlay" class="termsOverlay hide">
+    <div class="termsSheet">
+      <div class="termsHead"><h2>Edit your post</h2><button class="termsClose" onclick="closeEdit()">✕</button></div>
+      <div class="termsBody">
+        <textarea id="editText" maxlength="500" rows="5" style="width:100%;font-family:inherit;font-size:1rem;padding:12px;border-radius:12px;border:2px solid transparent;background:#fbf7ec;color:#1a1f12;outline:none;resize:vertical"></textarea>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="go" style="flex:1" onclick="savePostEdit()">Save changes</button>
+        </div>
+        <div class="msg" id="editMsg" aria-live="polite"></div>
       </div>
     </div>
   </div>
