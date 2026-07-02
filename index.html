@@ -94,6 +94,8 @@
   .nIc{font-size:1.15rem;flex:none;margin-top:1px}
   .nTx{line-height:1.45;font-size:.94rem}
   .nTime{display:block;color:var(--muted);font-size:.78rem;margin-top:2px}
+  .mutePill{margin-top:10px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:20px;padding:8px 16px;font-family:inherit;font-weight:600;font-size:.85rem;cursor:pointer}
+  .mutePill.on{background:rgba(255,111,97,.14);border-color:rgba(255,111,97,.5);color:var(--coral)}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
   .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
@@ -505,6 +507,7 @@
       <div class="avatar big" id="userAvatar" onclick="openAvatar(this)">E</div>
       <div class="uname" id="userName">Someone</div>
       <div class="usub" id="userSub"></div>
+      <button id="muteBtn" class="mutePill hide" onclick="toggleMute()"></button>
     </div>
     <h3 class="gridHead">Photos</h3>
     <div id="userGrid" class="photoGrid"><div class="gridEmpty">Loading…</div></div>
@@ -803,9 +806,10 @@
         if(l.user_id===currentUser.id) state.liked[l.post_id]=true;
       });
       comments.forEach(function(c){
+        if(isMuted(c.user_id)) return;
         (state.comments[c.post_id]=state.comments[c.post_id]||[]).push(c);
       });
-      renderFeed(posts);
+      renderFeed(posts.filter(function(p){return !isMuted(p.user_id);}));
     }catch(err){setAppMsg("Couldn't load the feed: "+(err.message||err),"err");}
   }
 
@@ -1057,6 +1061,30 @@
   function openHelp(){ var o=$("helpOverlay"); if(o) o.classList.remove("hide"); }
   function closeHelp(){ var o=$("helpOverlay"); if(o) o.classList.add("hide"); }
   var notifItems=[];
+  var viewedUserId=null;
+  function myMuted(){ var m=(currentUser&&currentUser.user_metadata&&currentUser.user_metadata.muted)||[]; return Array.isArray(m)?m:[]; }
+  function isMuted(id){ return myMuted().indexOf(id)>=0; }
+  function muteBtnState(){
+    var b=$("muteBtn"); if(!b)return;
+    if(!viewedUserId||!currentUser||viewedUserId===currentUser.id){ b.classList.add("hide"); return; }
+    b.classList.remove("hide");
+    var m=isMuted(viewedUserId);
+    b.textContent=m?"🔇 Muted — tap to unmute":"🔕 Mute this person";
+    b.classList.toggle("on",m);
+  }
+  async function toggleMute(){
+    if(!currentUser||!viewedUserId)return;
+    var arr=myMuted().slice(); var i=arr.indexOf(viewedUserId);
+    if(i>=0)arr.splice(i,1); else arr.push(viewedUserId);
+    try{
+      var r=await sb.auth.updateUser({data:{muted:arr}});
+      if(r.error)throw r.error;
+      if(!currentUser.user_metadata)currentUser.user_metadata={};
+      currentUser.user_metadata.muted=arr;
+      muteBtnState();
+      loadFeed();notifLoad();
+    }catch(e){}
+  }
   function notifSeenKey(){ return "eaNotifSeen_"+(currentUser?currentUser.id:""); }
   async function notifLoad(){
     if(!currentUser) return;
@@ -1066,8 +1094,8 @@
       if(!ids.length){ notifItems=[]; notifBadge(); return; }
       var lr=await sb.from("likes").select("*").in("post_id",ids);
       var cr=await sb.from("comments").select("*").in("post_id",ids);
-      var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id;});
-      var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id;});
+      var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id&&!isMuted(l.user_id);});
+      var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id&&!isMuted(c.user_id);});
       var need={}; likes.forEach(function(l){need[l.user_id]=1;});
       var nameMap={}; var idList=Object.keys(need);
       if(idList.length){ try{ var pf=await sb.from("profiles").select("id,full_name").in("id",idList); (pf.data||[]).forEach(function(p){nameMap[p.id]=p.full_name;}); }catch(e){} }
@@ -1125,7 +1153,7 @@
     try{
       var r=await sb.from("posts").select("*").in("user_id",ids).order("created_at",{ascending:false}).limit(30);
       if(r.error)throw r.error;
-      var posts=r.data||[];
+      var posts=(r.data||[]).filter(function(p){return !isMuted(p.user_id);});
       if(!posts.length){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">No moments yet.<br>When your connections share, their photos and music appear here. 🌍</div>'; return; }
       wrap.innerHTML='<div class="connSub">Recent moments from your connections</div>'+posts.map(connMomentCard).join("");
     }catch(err){ wrap.innerHTML='<div class="connSub">Recent moments from your connections</div><div class="connEmpty">Couldn\'t load moments right now.</div>'; }
@@ -1218,6 +1246,7 @@
   }
   async function viewUser(id){
     if(!id||!currentUser)return;
+    viewedUserId=id;
     if(!eaSub){ try{ history.pushState({eaSub:true},""); }catch(e){} eaSub=true; }
     $("feedView").classList.add("hide");
     $("peopleView").classList.add("hide");
@@ -1229,6 +1258,7 @@
     setAvatarEl($("userAvatar"),null,"E");
     $("userName").textContent="…";
     $("userSub").textContent="";
+    muteBtnState();
     window.scrollTo(0,0);
     var el=$("userGrid"); el.innerHTML='<div class="gridEmpty">Loading…</div>';
     try{
