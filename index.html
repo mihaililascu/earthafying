@@ -841,6 +841,8 @@
 
   async function logout(){
     await sb.auth.signOut();currentUser=null;clearPhoto();
+    var na=$("navAdmin"); if(na) na.classList.add("hide");
+    if(adminTimer){ clearInterval(adminTimer); adminTimer=null; }
     $("appScreen").classList.add("hide");$("authScreen").classList.remove("hide");
     $("email").value="";$("password").value="";setMode("login");
   }
@@ -851,7 +853,7 @@
     $("myName").textContent=firstName(name);$("myAvatar").textContent=initialOf(name);
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
     switchView("feed");setMoment();
-    if(isAdmin()){ var na=$("navAdmin"); if(na) na.classList.remove("hide"); }
+    var na=$("navAdmin"); if(na) na.classList.toggle("hide",!isAdmin());
     window.scrollTo(0,0); startAutoGlide();
     try{ await sb.from("profiles").upsert({id:user.id,full_name:name}); }catch(e){}
     try{ const pr=await sb.from("profiles").select("*").eq("id",user.id).single(); if(pr.data){ myProfile.full_name=pr.data.full_name||name; myProfile.avatar_url=pr.data.avatar_url||null; myProfile.bio=pr.data.bio||""; } }catch(e){}
