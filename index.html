@@ -1186,6 +1186,8 @@
     const inp=$("cinput-"+id);const text=inp.value.trim();
     if(!text)return;
     const name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
+    const mod=await moderateContent(text,null);
+    if(!mod.allowed){ setAppMsg("That comment doesn't fit Earthafying's kind space, so it wasn't posted.","err"); return; }
     try{
       const {data,error}=await sb.from("comments").insert({post_id:id,user_id:currentUser.id,author_name:name,content:text}).select();
       if(error)throw error;
@@ -1215,15 +1217,23 @@
     if(!currentUser)return;
     $("shareBtn").disabled=true;setAppMsg("");
     const name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
-    let imageUrl=null;
+    let imageUrl=null;let upPath=null;
     try{
       if(pendingFile){
         setAppMsg("Uploading photo…");
         const blob=await resizeImage(pendingFile,2560,0.92);
-        const path=currentUser.id+"/"+Date.now()+".jpg";
-        const up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
+        upPath=currentUser.id+"/"+Date.now()+".jpg";
+        const up=await sb.storage.from("photos").upload(upPath,blob,{contentType:"image/jpeg"});
         if(up.error)throw up.error;
-        imageUrl=sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+        imageUrl=sb.storage.from("photos").getPublicUrl(upPath).data.publicUrl;
+      }
+      setAppMsg("Checking with our safety guard…");
+      const mod=await moderateContent(text,imageUrl);
+      if(!mod.allowed){
+        if(upPath){ try{ await sb.storage.from("photos").remove([upPath]); }catch(e){} }
+        setAppMsg("This doesn't fit Earthafying's kind space, so it wasn't shared. If you think this is a mistake, tap ? → Report a problem.","err");
+        $("shareBtn").disabled=false;
+        return;
       }
       let finalContent=text;
       if(pendingMusic){ finalContent=(text?text+"\n":"")+"[[MUSIC]]"+pendingMusic; }
@@ -1278,6 +1288,13 @@
   function openPrivacy(e){ if(e&&e.preventDefault)e.preventDefault(); var o=$("privacyOverlay"); if(o) o.classList.remove("hide"); }
   function closePrivacy(){ var o=$("privacyOverlay"); if(o) o.classList.add("hide"); }
   var deferredInstall=null;
+  async function moderateContent(text,imageUrl){
+    try{
+      var r=await fetch("/api/moderate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text||"",imageUrl:imageUrl||null})});
+      if(!r.ok) return {allowed:true,offline:true};
+      return await r.json();
+    }catch(e){ return {allowed:true,offline:true}; }
+  }
   async function heartbeat(){
     if(!currentUser) return;
     try{ await sb.from("profiles").update({last_seen:new Date().toISOString()}).eq("id",currentUser.id); }catch(e){}
@@ -1456,6 +1473,7 @@
     if(!currentUser)return;
     var v=$("profileBio").value.trim();
     setProfileMsg("Saving…");
+    if(v){ var mod=await moderateContent(v,null); if(!mod.allowed){ setProfileMsg("That bio doesn't fit Earthafying's kind space.","err"); return; } }
     try{
       var r=await sb.from("profiles").update({bio:v||null}).eq("id",currentUser.id);
       if(r.error)throw r.error;
