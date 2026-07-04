@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Earthafying</title>
+<link rel="manifest" href="/manifest.json" />
+<meta name="theme-color" content="#10140d" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Earthafying" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@300;400;500;600;700&family=Inter:wght@600;800&family=Playfair+Display:wght@600;700&family=Caveat:wght@600;700&family=Quicksand:wght@600;700&display=swap" rel="stylesheet" />
@@ -120,6 +127,7 @@
   .aTime{color:var(--muted);font-size:.76rem}
   .aSnip{color:var(--muted);font-size:.84rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .aThumb{width:44px;height:44px;border-radius:8px;object-fit:cover;flex:none;cursor:zoom-in}
+  .aOn{color:#4ade80;font-weight:700;font-size:.78rem}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
   .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
@@ -539,13 +547,17 @@
       <button class="profSave" style="margin:0" onclick="loadAdmin()">↻ Refresh</button>
     </div>
     <div class="statGrid">
+      <div class="statCard"><div class="statNum" id="stOnline">—</div><div class="statLbl">🟢 Online now</div><div class="statSub" id="stOnlineSub"></div></div>
+      <div class="statCard"><div class="statNum" id="stActive">—</div><div class="statLbl">Active today</div><div class="statSub"></div></div>
       <div class="statCard"><div class="statNum" id="stUsers">—</div><div class="statLbl">People</div><div class="statSub" id="stUsersToday"></div></div>
       <div class="statCard"><div class="statNum" id="stPosts">—</div><div class="statLbl">Posts</div><div class="statSub" id="stPostsToday"></div></div>
       <div class="statCard"><div class="statNum" id="stComments">—</div><div class="statLbl">Comments</div><div class="statSub" id="stCommentsToday"></div></div>
       <div class="statCard"><div class="statNum" id="stLikes">—</div><div class="statLbl">Appreciations</div><div class="statSub" id="stLikesToday"></div></div>
     </div>
-    <h3 class="gridHead">Newest people</h3>
+    <h3 class="gridHead">People — live view</h3>
     <div id="adminUsers" class="adminList"><div class="gridEmpty">Loading…</div></div>
+    <h3 class="gridHead">Recent comments</h3>
+    <div id="adminComments" class="adminList"><div class="gridEmpty">Loading…</div></div>
     <h3 class="gridHead">Recent posts — moderation desk</h3>
     <div id="adminPosts" class="adminList"><div class="gridEmpty">Loading…</div></div>
   </div>
@@ -844,7 +856,7 @@
     try{ await sb.from("profiles").upsert({id:user.id,full_name:name}); }catch(e){}
     try{ const pr=await sb.from("profiles").select("*").eq("id",user.id).single(); if(pr.data){ myProfile.full_name=pr.data.full_name||name; myProfile.avatar_url=pr.data.avatar_url||null; myProfile.bio=pr.data.bio||""; } }catch(e){}
     applyMyAvatar();
-    loadFeed();loadPeople();notifLoad();
+    loadFeed();loadPeople();notifLoad();heartbeat();
   }
 
   var eaSub=false; /* true when showing a sub-view (People / Me / someone's profile) with a pushed history entry */
@@ -869,12 +881,15 @@
     if(v==="people") loadPeople();
     if(v==="profile") loadProfile();
     if(v==="admin") loadAdmin();
+    if(adminTimer){ clearInterval(adminTimer); adminTimer=null; }
+    if(v==="admin"){ adminTimer=setInterval(function(){ var av=$("adminView"); if(av&&!av.classList.contains("hide")) loadAdmin(); },30000); }
   }
   window.addEventListener("popstate",function(){
     if(!currentUser) return;
     var pv=$("photoViewer"); if(pv) pv.classList.add("hide");
     var ps=$("photoSheet"); if(ps) ps.classList.add("hide");
     var cp=$("connectionsPage"); if(cp) cp.classList.add("hide");
+    ["helpOverlay","notifOverlay","editOverlay","privacyOverlay","termsOverlay"].forEach(function(id){ var o=$(id); if(o) o.classList.add("hide"); });
     document.body.style.overflow="";
     eaSub=false;
     showViewInternal("feed");
@@ -1094,15 +1109,41 @@
     var ct=await cntToday("comments"); $("stCommentsToday").textContent=ct==null?"":("+"+ct+" today");
     var lt=await cntToday("likes"); $("stLikesToday").textContent=lt==null?"":("+"+lt+" today");
     var ut=await cntToday("profiles"); $("stUsersToday").textContent=ut==null?"":("+"+ut+" today");
+    var flagMap={};
+    try{
+      var fpr=await sb.from("posts").select("user_id,content,created_at").order("created_at",{ascending:false}).limit(150);
+      (fpr.data||[]).forEach(function(p){ if(flagMap[p.user_id]!==undefined)return; var cc=parsePost(p.content||"").country; if(cc)flagMap[p.user_id]=cc; });
+    }catch(e){}
     try{
       var ur=await sb.from("profiles").select("*").limit(200);
       var users=(ur.data||[]);
-      if(users.length&&users[0].created_at!==undefined){ users.sort(function(a,b){return new Date(b.created_at||0)-new Date(a.created_at||0);}); }
-      $("adminUsers").innerHTML=users.slice(0,12).map(function(u){
-        var t=u.created_at?('<span class="aTime">'+timeAgo(u.created_at)+'</span>'):'';
-        return '<div class="adminRow">'+avatarTag(u.full_name)+'<div class="aTx"><b>'+escapeHtml(u.full_name||"Someone")+'</b>'+t+'</div><button class="pill linked" onclick="viewUser(\''+u.id+'\')">View ›</button></div>';
+      var now=Date.now(), online=0, active=0, hasSeen=users.length&&users[0].last_seen!==undefined;
+      users.forEach(function(u){ if(!u.last_seen)return; var t=new Date(u.last_seen).getTime(); if(now-t<2*60000)online++; if(now-t<24*3600000)active++; });
+      $("stOnline").textContent=hasSeen?online:"—";
+      $("stActive").textContent=hasSeen?active:"—";
+      $("stOnlineSub").textContent=hasSeen?"":"needs last_seen column";
+      users.sort(function(a,b){
+        var ta=a.last_seen?new Date(a.last_seen).getTime():(a.created_at?new Date(a.created_at).getTime():0);
+        var tb=b.last_seen?new Date(b.last_seen).getTime():(b.created_at?new Date(b.created_at).getTime():0);
+        return tb-ta;
+      });
+      $("adminUsers").innerHTML=users.slice(0,20).map(function(u){
+        var isOn=u.last_seen&&(now-new Date(u.last_seen).getTime()<2*60000);
+        var seen=isOn?'<span class="aOn">● online now</span>':(u.last_seen?('last seen '+timeAgo(u.last_seen)):'');
+        var joined=u.created_at?('joined '+timeAgo(u.created_at)):'';
+        var meta=[seen,joined].filter(Boolean).join(" · ");
+        var fl=flagMap[u.id]?(' '+flagEmoji(flagMap[u.id])):'';
+        return '<div class="adminRow">'+avatarTag(u.full_name)+'<div class="aTx"><b>'+escapeHtml(u.full_name||"Someone")+fl+'</b><span class="aTime">'+meta+'</span></div><button class="pill linked" onclick="viewUser(\''+u.id+'\')">View ›</button></div>';
       }).join("")||'<div class="gridEmpty">No people yet.</div>';
     }catch(e){ $("adminUsers").innerHTML='<div class="gridEmpty">Couldn\'t load people.</div>'; }
+    try{
+      var crr=await sb.from("comments").select("*").order("created_at",{ascending:false}).limit(20);
+      var comms=(crr.data||[]);
+      $("adminComments").innerHTML=comms.map(function(c){
+        var snip=escapeHtml((c.content||"").length>80?c.content.slice(0,80)+"…":(c.content||""));
+        return '<div class="adminRow"><div class="aTx"><b>'+escapeHtml(c.author_name||"Someone")+'</b><span class="aTime">'+timeAgo(c.created_at)+'</span><span class="aSnip">'+snip+'</span></div><button class="delPost" onclick="adminDeleteComment(\''+c.id+'\')">Delete</button></div>';
+      }).join("")||'<div class="gridEmpty">No comments yet.</div>';
+    }catch(e){ $("adminComments").innerHTML='<div class="gridEmpty">Couldn\'t load comments.</div>'; }
     try{
       var pr=await sb.from("posts").select("*").order("created_at",{ascending:false}).limit(30);
       var posts=(pr.data||[]);
@@ -1114,6 +1155,16 @@
       }).join("")||'<div class="gridEmpty">No posts yet.</div>';
     }catch(e){ $("adminPosts").innerHTML='<div class="gridEmpty">Couldn\'t load posts.</div>'; }
   }
+  async function adminDeleteComment(id){
+    if(!isAdmin())return;
+    if(!confirm("Delete this comment for everyone?"))return;
+    try{
+      var r=await sb.from("comments").delete().eq("id",id);
+      if(r.error)throw r.error;
+    }catch(e){ alert("Couldn't delete — your database rules may only allow people to delete their own comments. Tell Claude and we'll fix the rule together."); }
+    loadAdmin();
+  }
+  var adminTimer=null;
   async function adminDelete(id){
     if(!isAdmin())return;
     if(!confirm("Delete this post for everyone?"))return;
@@ -1226,6 +1277,26 @@
   function closeHelp(){ var o=$("helpOverlay"); if(o) o.classList.add("hide"); }
   function openPrivacy(e){ if(e&&e.preventDefault)e.preventDefault(); var o=$("privacyOverlay"); if(o) o.classList.remove("hide"); }
   function closePrivacy(){ var o=$("privacyOverlay"); if(o) o.classList.add("hide"); }
+  var deferredInstall=null;
+  async function heartbeat(){
+    if(!currentUser) return;
+    try{ await sb.from("profiles").update({last_seen:new Date().toISOString()}).eq("id",currentUser.id); }catch(e){}
+  }
+  setInterval(heartbeat,60000);
+  window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); deferredInstall=e; });
+  async function installApp(){
+    closeHelp();
+    if(deferredInstall){
+      deferredInstall.prompt();
+      try{ await deferredInstall.userChoice; }catch(e){}
+      deferredInstall=null;
+      return;
+    }
+    var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+    alert(isIOS
+      ? "To install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow)\n2. Scroll and tap “Add to Home Screen”\n3. Tap Add — Earthafying appears with its own icon 🌍"
+      : "To install:\n\n1. Open your browser menu (⋮)\n2. Tap “Add to Home screen” or “Install app”\n3. Confirm — Earthafying appears with its own icon 🌍");
+  }
   var notifItems=[];
   var viewedUserId=null;
   function myMuted(){ var m=(currentUser&&currentUser.user_metadata&&currentUser.user_metadata.muted)||[]; return Array.isArray(m)?m:[]; }
@@ -1859,6 +1930,7 @@
         <div class="helpMenu">
           <a class="helpItem" href="mailto:mihailascu05@gmail.com?subject=Earthafying%20-%20Contact"><span class="hi-ic">✉️</span><span class="hi-tx"><b>Contact us</b><span>Send a message or a question</span></span></a>
           <a class="helpItem" href="mailto:mihailascu05@gmail.com?subject=Earthafying%20-%20Report%20a%20problem"><span class="hi-ic">⚠️</span><span class="hi-tx"><b>Report a problem</b><span>Flag something that isn't right</span></span></a>
+          <button class="helpItem" onclick="installApp()"><span class="hi-ic">📲</span><span class="hi-tx"><b>Install the app</b><span>Put Earthafying on your home screen</span></span></button>
           <button class="helpItem" onclick="closeHelp();openPrivacy(event)"><span class="hi-ic">🔒</span><span class="hi-tx"><b>Privacy &amp; Safety</b><span>Your data, plainly explained</span></span></button>
           <button class="helpItem" onclick="closeHelp();openTerms(event)"><span class="hi-ic">📄</span><span class="hi-tx"><b>Community Guidelines &amp; Terms</b><span>How we keep Earthafying kind &amp; safe</span></span></button>
         </div>
