@@ -1344,23 +1344,34 @@
   function notifSeenKey(){ return "eaNotifSeen_"+(currentUser?currentUser.id:""); }
   async function notifLoad(){
     if(!currentUser) return;
+    var items=[];
+    // Appreciations & comments on MY posts
     try{
       var pr=await sb.from("posts").select("id").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
       var ids=(pr.data||[]).map(function(p){return p.id;});
-      if(!ids.length){ notifItems=[]; notifBadge(); return; }
-      var lr=await sb.from("likes").select("*").in("post_id",ids);
-      var cr=await sb.from("comments").select("*").in("post_id",ids);
-      var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id&&!isMuted(l.user_id);});
-      var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id&&!isMuted(c.user_id);});
-      var need={}; likes.forEach(function(l){need[l.user_id]=1;});
-      var nameMap={}; var idList=Object.keys(need);
-      if(idList.length){ try{ var pf=await sb.from("profiles").select("id,full_name").in("id",idList); (pf.data||[]).forEach(function(p){nameMap[p.id]=p.full_name;}); }catch(e){} }
-      var items=[];
-      likes.forEach(function(l){ items.push({t:"like",name:nameMap[l.user_id]||"Someone",time:l.created_at||null}); });
-      comms.forEach(function(c){ items.push({t:"comment",name:c.author_name||"Someone",text:c.content||"",time:c.created_at||null}); });
-      items.sort(function(a,b){ return new Date(b.time||0)-new Date(a.time||0); });
-      notifItems=items.slice(0,30);
-    }catch(e){ notifItems=[]; }
+      if(ids.length){
+        var lr=await sb.from("likes").select("*").in("post_id",ids);
+        var cr=await sb.from("comments").select("*").in("post_id",ids);
+        var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id&&!isMuted(l.user_id);});
+        var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id&&!isMuted(c.user_id);});
+        var need={}; likes.forEach(function(l){need[l.user_id]=1;});
+        var nameMap={}; var idList=Object.keys(need);
+        if(idList.length){ try{ var pf=await sb.from("profiles").select("id,full_name").in("id",idList); (pf.data||[]).forEach(function(p){nameMap[p.id]=p.full_name;}); }catch(e){} }
+        likes.forEach(function(l){ items.push({t:"like",name:nameMap[l.user_id]||"Someone",time:l.created_at||null}); });
+        comms.forEach(function(c){ items.push({t:"comment",name:c.author_name||"Someone",text:c.content||"",time:c.created_at||null}); });
+      }
+    }catch(e){}
+    // New moments from my CONNECTIONS (connections-only)
+    try{
+      var cxr=await sb.from("connections").select("requester_id,addressee_id,status").or("requester_id.eq."+currentUser.id+",addressee_id.eq."+currentUser.id).eq("status","accepted");
+      var connIds=(cxr.data||[]).map(function(c){return c.requester_id===currentUser.id?c.addressee_id:c.requester_id;}).filter(function(uid){return uid&&uid!==currentUser.id&&!isMuted(uid);});
+      if(connIds.length){
+        var cpr=await sb.from("posts").select("id,user_id,author_name,created_at").in("user_id",connIds).order("created_at",{ascending:false}).limit(30);
+        (cpr.data||[]).forEach(function(p){ items.push({t:"post",name:p.author_name||"A connection",time:p.created_at||null,uid:p.user_id,pid:p.id}); });
+      }
+    }catch(e){}
+    items.sort(function(a,b){ return new Date(b.time||0)-new Date(a.time||0); });
+    notifItems=items.slice(0,30);
     notifBadge();
   }
   function notifUnseen(){
@@ -1376,11 +1387,12 @@
       l.innerHTML=notifItems.map(function(it){
         var time=it.time?('<span class="nTime">'+timeAgo(it.time)+'</span>'):'';
         if(it.t==="like") return '<div class="notifItem"><span class="nIc">💚</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> appreciated your post'+time+'</span></div>';
+        if(it.t==="post") return '<div class="notifItem" onclick="closeNotifs();viewUser(\''+it.uid+'\')" style="cursor:pointer"><span class="nIc">📸</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> shared a new moment'+time+'</span></div>';
         var txt=it.text.length>60?it.text.slice(0,60)+"…":it.text;
         return '<div class="notifItem"><span class="nIc">💬</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> commented: “'+escapeHtml(txt)+'”'+time+'</span></div>';
       }).join("");
     } else {
-      l.innerHTML='<div class="notifItem"><span class="nIc">🌍</span><span class="nTx">Nothing yet.<br>When people appreciate or comment on your posts, it shows here.</span></div>';
+      l.innerHTML='<div class="notifItem"><span class="nIc">🌍</span><span class="nTx">Nothing yet.<br>When people appreciate or comment on your posts — or a connection shares something new — it shows here.</span></div>';
     }
     $("notifOverlay").classList.remove("hide");
     try{ localStorage.setItem(notifSeenKey(),new Date().toISOString()); }catch(e){}
