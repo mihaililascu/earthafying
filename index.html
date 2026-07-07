@@ -330,6 +330,12 @@
   #authHero{min-height:64vh}
   @media (prefers-reduced-motion: reduce){ .planet,.p-shadow,.scrollCue{animation:none!important} }
 
+.guestWelcome{margin:14px 12px 4px;padding:22px 18px;border-radius:20px;text-align:center;background:linear-gradient(160deg,rgba(43,191,134,.16),rgba(255,138,101,.10));border:1px solid rgba(255,255,255,.09)}
+.guestWelcome .gwTitle{font-size:1.3rem;font-weight:800;color:var(--text);letter-spacing:.2px}
+.guestWelcome .gwSub{font-size:.95rem;color:var(--muted);max-width:34ch;margin:9px auto 0;line-height:1.45}
+.guestWelcome .gwJoin{margin-top:16px;background:linear-gradient(120deg,var(--coral),var(--amber));color:#fff;border:none;padding:13px 44px;border-radius:999px;font-weight:800;font-size:1.02rem;cursor:pointer;box-shadow:0 6px 22px rgba(255,138,101,.35)}
+.guestWelcome .gwJoin:active{filter:brightness(1.08)}
+.guestWelcome .gwNote{margin-top:12px;font-size:.76rem;color:var(--muted);opacity:.85}
 </style>
 </head>
 <body>
@@ -463,13 +469,19 @@
   </div>
 
   <div id="feedView">
+    <div id="guestWelcome" class="guestWelcome hide">
+      <div class="gwTitle">Welcome to Earthafying 🌍</div>
+      <div class="gwSub">Real moments from every corner of the world, shared freely. We're all from here — look around as long as you like.</div>
+      <button class="gwJoin" onclick="promptSignup('Join free to share your world 🌍')">Join free</button>
+      <div class="gwNote">Free forever · no ads · you're just browsing</div>
+    </div>
     <div class="moment" id="pulseCard">
       <div class="ml">🌍 World Pulse · one prompt, everywhere, today</div>
       <div class="mp" id="momentPrompt">&nbsp;</div>
       <div id="pulseActions" class="pulseActions"></div>
       <div id="pulseGallery" class="pulseGallery hide"></div>
     </div>
-    <div class="compose">
+    <div class="compose" id="composeBox">
       <div class="who">
         <div class="avatar" id="myAvatar">M</div>
         <div class="greet">Share a moment, <b id="myName">friend</b></div>
@@ -853,6 +865,7 @@
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
     var gj=$("guestJoin"),lo=$("logoutBtn");if(gj)gj.style.display="";if(lo)lo.style.display="none";
     var na=$("navAdmin"); if(na) na.classList.add("hide");
+    var gw=$("guestWelcome");if(gw)gw.classList.remove("hide");var cb=$("composeBox");if(cb)cb.style.display="none";
     showViewInternal("feed");setMoment();
     window.scrollTo(0,0); try{ startAutoGlide(); }catch(e){}
     try{ await loadFeed(); }catch(e){}
@@ -869,7 +882,7 @@
     const name=(user.user_metadata&&user.user_metadata.full_name)||"friend";
     $("myName").textContent=firstName(name);$("myAvatar").textContent=initialOf(name);
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
-    var gj=$("guestJoin"),lo=$("logoutBtn"),bb=$("browseBack");if(gj)gj.style.display="none";if(lo)lo.style.display="";if(bb)bb.classList.add("hide");
+    var gj=$("guestJoin"),lo=$("logoutBtn"),bb=$("browseBack");if(gj)gj.style.display="none";if(lo)lo.style.display="";if(bb)bb.classList.add("hide");var gw2=$("guestWelcome");if(gw2)gw2.classList.add("hide");var cb2=$("composeBox");if(cb2)cb2.style.display="";
     switchView("feed");setMoment();
     var na=$("navAdmin"); if(na) na.classList.toggle("hide",!isAdmin());
     window.scrollTo(0,0); startAutoGlide();
@@ -1044,8 +1057,8 @@
   function scrollToForm(){ var c=document.getElementById("authCard"); if(c) smoothScrollTo(Math.max(0,c.getBoundingClientRect().top+(window.scrollY||window.pageYOffset)-14),1100,false); }
   function goSignup(){ if(typeof setMode==="function") setMode("signup"); var c=document.getElementById("authCard"); if(c) smoothScrollTo(Math.max(0,c.getBoundingClientRect().top+(window.scrollY||window.pageYOffset)-14),1600,false); }
   function scrollToCompose(){ var c=document.querySelector(".compose"); if(c){ cancelAuto(); smoothScrollTo(Math.max(0,c.getBoundingClientRect().top+(window.scrollY||window.pageYOffset)-58),1000,false); } }
-  function shareMoment(){ scrollToCompose(); setTimeout(function(){ var t=document.getElementById("postText"); if(t)t.focus(); },1050); }
-  function promptShare(text){
+  function shareMoment(){if(!currentUser)return promptSignup("Sign up to share your world 🌍"); scrollToCompose(); setTimeout(function(){ var t=document.getElementById("postText"); if(t)t.focus(); },1050); }
+  function promptShare(text){if(!currentUser)return promptSignup("Sign up to share your world 🌍");
     var t=document.getElementById("postText");
     if(t){ t.value=text; try{ t.dispatchEvent(new Event("input")); }catch(e){} }
     scrollToCompose();
