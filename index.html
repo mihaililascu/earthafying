@@ -337,6 +337,9 @@
 .guestWelcome .gwJoin:active{filter:brightness(1.08)}
 .guestWelcome .gwNote{margin-top:12px;font-size:.76rem;color:var(--muted);opacity:.85}
 </style>
+  <!-- Vercel Web Analytics -->
+  <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
+  <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
 
@@ -566,6 +569,7 @@
       <div class="statCard"><div class="statNum" id="stPosts">—</div><div class="statLbl">Posts</div><div class="statSub" id="stPostsToday"></div></div>
       <div class="statCard"><div class="statNum" id="stComments">—</div><div class="statLbl">Comments</div><div class="statSub" id="stCommentsToday"></div></div>
       <div class="statCard"><div class="statNum" id="stLikes">—</div><div class="statLbl">Appreciations</div><div class="statSub" id="stLikesToday"></div></div>
+            <div class="statCard"><div class="statNum" id="stGuests">—</div><div class="statLbl">👀 Guest visits</div><div class="statSub" id="stGuestsToday"></div></div>
     </div>
     <h3 class="gridHead">People — live view</h3>
     <div id="adminUsers" class="adminList"><div class="gridEmpty">Loading…</div></div>
@@ -862,6 +866,7 @@
 
   async function enterGuest(){
     currentUser=null;
+    try{ if(!sessionStorage.getItem("ea_guest_ev")){ sessionStorage.setItem("ea_guest_ev","1"); if(window.va) window.va("event",{name:"guest_visit"}); try{ sb.from("visits").insert({}); }catch(_){} } }catch(e){ try{ if(window.va) window.va("event",{name:"guest_visit"}); }catch(_){} }
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
     var gj=$("guestJoin"),lo=$("logoutBtn");if(gj)gj.style.display="";if(lo)lo.style.display="none";
     var na=$("navAdmin"); if(na) na.classList.add("hide");
@@ -1140,9 +1145,11 @@
     $("stPosts").textContent=await cnt("posts");
     $("stComments").textContent=await cnt("comments");
     $("stLikes").textContent=await cnt("likes");
+    $("stGuests").textContent=await cnt("visits");
     var pt=await cntToday("posts"); $("stPostsToday").textContent=pt==null?"":("+"+pt+" today");
     var ct=await cntToday("comments"); $("stCommentsToday").textContent=ct==null?"":("+"+ct+" today");
     var lt=await cntToday("likes"); $("stLikesToday").textContent=lt==null?"":("+"+lt+" today");
+    var gvt=await cntToday("visits"); $("stGuestsToday").textContent=gvt==null?"":("+"+gvt+" today");
     var ut=await cntToday("profiles"); $("stUsersToday").textContent=ut==null?"":("+"+ut+" today");
     var flagMap={};
     try{
