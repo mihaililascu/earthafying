@@ -1347,8 +1347,8 @@
     }
     var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
     alert(isIOS
-      ? "To install on iPhone/iPad:\n\n1. Tap the Share button (square with arrow)\n2. Scroll and tap “Add to Home Screen”\n3. Tap Add — Earthafying appears with its own icon 🌍"
-      : "To install:\n\n1. Open your browser menu (⋮)\n2. Tap “Add to Home screen” or “Install app”\n3. Confirm — Earthafying appears with its own icon 🌍");
+      ? "Earthafying is a web app — no App Store download needed.\n\nTo add it to your home screen on iPhone/iPad:\n\n1. Tap the Share button (square with arrow)\n2. Scroll and tap “Add to Home Screen”\n3. Tap Add — Earthafying opens like an app, with its own Earth icon 🌍"
+      : "Earthafying is a web app — no App Store download needed.\n\nTo add it to your home screen:\n\n1. Open your browser menu (⋮)\n2. Tap “Add to Home screen” or “Install app”\n3. Confirm — Earthafying opens like an app, with its own Earth icon 🌍");
   }
   var notifItems=[];
   var viewedUserId=null;
@@ -1985,7 +1985,7 @@
         <div class="helpMenu">
           <a class="helpItem" href="mailto:hello@earthafying.com?subject=Earthafying%20-%20Contact"><span class="hi-ic">✉️</span><span class="hi-tx"><b>Contact us</b><span>Send a message or a question</span></span></a>
           <a class="helpItem" href="mailto:hello@earthafying.com?subject=Earthafying%20-%20Report%20a%20problem"><span class="hi-ic">⚠️</span><span class="hi-tx"><b>Report a problem</b><span>Flag something that isn't right</span></span></a>
-          <button class="helpItem" onclick="installApp()"><span class="hi-ic">📲</span><span class="hi-tx"><b>Install the app</b><span>Put Earthafying on your home screen</span></span></button>
+          <button class="helpItem" onclick="installApp()"><span class="hi-ic">📲</span><span class="hi-tx"><b>Add to Home Screen</b><span>Get the Earthafying web app — no App Store needed</span></span></button>
           <button class="helpItem" onclick="closeHelp();openPrivacy(event)"><span class="hi-ic">🔒</span><span class="hi-tx"><b>Privacy &amp; Safety</b><span>Your data, plainly explained</span></span></button>
           <button class="helpItem" onclick="closeHelp();openTerms(event)"><span class="hi-ic">📄</span><span class="hi-tx"><b>Community Guidelines &amp; Terms</b><span>How we keep Earthafying kind &amp; safe</span></span></button>
         </div>
