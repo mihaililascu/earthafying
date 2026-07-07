@@ -348,6 +348,7 @@
     </div>
   </header>
   <div class="card" id="authCard">
+    <button id="browseBack" class="hide" onclick="enterGuest()" style="background:none;border:none;color:#2bbf86;font-weight:700;cursor:pointer;padding:6px 0;font-size:15px">← Keep browsing the feed</button>
     <div class="tabs">
       <button id="tabLogin" class="active" onclick="setMode('login')">Log in</button>
       <button id="tabSignup" onclick="setMode('signup')">Sign up</button>
@@ -440,7 +441,7 @@
     <div class="tbRight">
       <button class="helpIcon" onclick="openNotifs()" aria-label="Notifications" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="notifBadge" class="notifBadge hide">0</span></button>
       <button class="helpIcon" onclick="openHelp()" aria-label="Help and support"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/><path d="M9.8 9.4a2.2 2.2 0 0 1 4.2.9c0 1.5-2 1.8-2 3"/><circle cx="12" cy="16.3" r=".6" fill="currentColor" stroke="none"/></svg></button>
-      <button class="logout" onclick="logout()">Log out</button>
+      <button class="logout" id="logoutBtn" onclick="logout()">Log out</button><button class="logout" id="guestJoin" onclick="promptSignup()" style="display:none">Sign up</button>
     </div>
   </div>
 
@@ -847,11 +848,28 @@
     $("email").value="";$("password").value="";setMode("login");
   }
 
+  async function enterGuest(){
+    currentUser=null;
+    $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
+    var gj=$("guestJoin"),lo=$("logoutBtn");if(gj)gj.style.display="";if(lo)lo.style.display="none";
+    var na=$("navAdmin"); if(na) na.classList.add("hide");
+    showViewInternal("feed");setMoment();
+    window.scrollTo(0,0); try{ startAutoGlide(); }catch(e){}
+    try{ await loadFeed(); }catch(e){}
+  }
+  function promptSignup(msg){
+    $("appScreen").classList.add("hide");$("authScreen").classList.remove("hide");
+    setMode("signup");
+    var bb=$("browseBack"); if(bb) bb.classList.remove("hide");
+    setMsg(msg||"Sign up to join in 🌍");
+    try{ scrollToForm(); }catch(e){}
+  }
   async function enterApp(user){
     currentUser=user;
     const name=(user.user_metadata&&user.user_metadata.full_name)||"friend";
     $("myName").textContent=firstName(name);$("myAvatar").textContent=initialOf(name);
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
+    var gj=$("guestJoin"),lo=$("logoutBtn"),bb=$("browseBack");if(gj)gj.style.display="none";if(lo)lo.style.display="";if(bb)bb.classList.add("hide");
     switchView("feed");setMoment();
     var na=$("navAdmin"); if(na) na.classList.toggle("hide",!isAdmin());
     window.scrollTo(0,0); startAutoGlide();
@@ -863,6 +881,7 @@
 
   var eaSub=false; /* true when showing a sub-view (People / Me / someone's profile) with a pushed history entry */
   function switchView(v){
+    if(!currentUser && (v==="people"||v==="profile"||v==="admin")){ promptSignup("Sign up to see this 🌍"); return; }
     if(v==="feed"){
       if(eaSub){ try{ history.back(); return; }catch(e){} }
     } else {
@@ -912,7 +931,7 @@
       state.likeCount={};state.liked={};state.comments={};
       likes.forEach(function(l){
         state.likeCount[l.post_id]=(state.likeCount[l.post_id]||0)+1;
-        if(l.user_id===currentUser.id) state.liked[l.post_id]=true;
+        if(currentUser && l.user_id===currentUser.id) state.liked[l.post_id]=true;
       });
       comments.forEach(function(c){
         if(isMuted(c.user_id)) return;
@@ -965,7 +984,7 @@
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
-        (p.user_id===currentUser.id?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
+        ((currentUser&&p.user_id===currentUser.id)?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
         img+body+music+
@@ -982,6 +1001,7 @@
   }
 
   async function toggleLike(id){
+    if(!currentUser)return promptSignup("Sign up to appreciate posts 🌍");
     const liked=!!state.liked[id];
     try{
       if(liked){
@@ -1185,6 +1205,7 @@
   }
 
   async function addComment(id){
+    if(!currentUser)return promptSignup("Sign up to comment 🌍");
     const inp=$("cinput-"+id);const text=inp.value.trim();
     if(!text)return;
     const name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
@@ -1216,7 +1237,7 @@
   async function createPost(){
     const text=$("postText").value.trim();
     if(!text&&!pendingFile&&!pendingMusic){setAppMsg("Write something, add a photo, or attach music first.","err");return;}
-    if(!currentUser)return;
+    if(!currentUser)return promptSignup("Sign up to share your first moment 🌍");
     $("shareBtn").disabled=true;setAppMsg("");
     const name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
     let imageUrl=null;let upPath=null;
@@ -1344,34 +1365,23 @@
   function notifSeenKey(){ return "eaNotifSeen_"+(currentUser?currentUser.id:""); }
   async function notifLoad(){
     if(!currentUser) return;
-    var items=[];
-    // Appreciations & comments on MY posts
     try{
       var pr=await sb.from("posts").select("id").eq("user_id",currentUser.id).order("created_at",{ascending:false}).limit(100);
       var ids=(pr.data||[]).map(function(p){return p.id;});
-      if(ids.length){
-        var lr=await sb.from("likes").select("*").in("post_id",ids);
-        var cr=await sb.from("comments").select("*").in("post_id",ids);
-        var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id&&!isMuted(l.user_id);});
-        var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id&&!isMuted(c.user_id);});
-        var need={}; likes.forEach(function(l){need[l.user_id]=1;});
-        var nameMap={}; var idList=Object.keys(need);
-        if(idList.length){ try{ var pf=await sb.from("profiles").select("id,full_name").in("id",idList); (pf.data||[]).forEach(function(p){nameMap[p.id]=p.full_name;}); }catch(e){} }
-        likes.forEach(function(l){ items.push({t:"like",name:nameMap[l.user_id]||"Someone",time:l.created_at||null}); });
-        comms.forEach(function(c){ items.push({t:"comment",name:c.author_name||"Someone",text:c.content||"",time:c.created_at||null}); });
-      }
-    }catch(e){}
-    // New moments from my CONNECTIONS (connections-only)
-    try{
-      var cxr=await sb.from("connections").select("requester_id,addressee_id,status").or("requester_id.eq."+currentUser.id+",addressee_id.eq."+currentUser.id).eq("status","accepted");
-      var connIds=(cxr.data||[]).map(function(c){return c.requester_id===currentUser.id?c.addressee_id:c.requester_id;}).filter(function(uid){return uid&&uid!==currentUser.id&&!isMuted(uid);});
-      if(connIds.length){
-        var cpr=await sb.from("posts").select("id,user_id,author_name,created_at").in("user_id",connIds).order("created_at",{ascending:false}).limit(30);
-        (cpr.data||[]).forEach(function(p){ items.push({t:"post",name:p.author_name||"A connection",time:p.created_at||null,uid:p.user_id,pid:p.id}); });
-      }
-    }catch(e){}
-    items.sort(function(a,b){ return new Date(b.time||0)-new Date(a.time||0); });
-    notifItems=items.slice(0,30);
+      if(!ids.length){ notifItems=[]; notifBadge(); return; }
+      var lr=await sb.from("likes").select("*").in("post_id",ids);
+      var cr=await sb.from("comments").select("*").in("post_id",ids);
+      var likes=(lr.data||[]).filter(function(l){return l.user_id!==currentUser.id&&!isMuted(l.user_id);});
+      var comms=(cr.data||[]).filter(function(c){return c.user_id!==currentUser.id&&!isMuted(c.user_id);});
+      var need={}; likes.forEach(function(l){need[l.user_id]=1;});
+      var nameMap={}; var idList=Object.keys(need);
+      if(idList.length){ try{ var pf=await sb.from("profiles").select("id,full_name").in("id",idList); (pf.data||[]).forEach(function(p){nameMap[p.id]=p.full_name;}); }catch(e){} }
+      var items=[];
+      likes.forEach(function(l){ items.push({t:"like",name:nameMap[l.user_id]||"Someone",time:l.created_at||null}); });
+      comms.forEach(function(c){ items.push({t:"comment",name:c.author_name||"Someone",text:c.content||"",time:c.created_at||null}); });
+      items.sort(function(a,b){ return new Date(b.time||0)-new Date(a.time||0); });
+      notifItems=items.slice(0,30);
+    }catch(e){ notifItems=[]; }
     notifBadge();
   }
   function notifUnseen(){
@@ -1382,17 +1392,17 @@
   }
   function notifBadge(){ var b=$("notifBadge"); if(!b)return; var n=notifUnseen(); b.textContent=n>9?"9+":String(n); b.classList.toggle("hide",n===0); }
   function openNotifs(){
+    if(!currentUser)return promptSignup("Sign up to see your notifications 🌍");
     var l=$("notifList");
     if(notifItems.length){
       l.innerHTML=notifItems.map(function(it){
         var time=it.time?('<span class="nTime">'+timeAgo(it.time)+'</span>'):'';
         if(it.t==="like") return '<div class="notifItem"><span class="nIc">💚</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> appreciated your post'+time+'</span></div>';
-        if(it.t==="post") return '<div class="notifItem" onclick="closeNotifs();viewUser(\''+it.uid+'\')" style="cursor:pointer"><span class="nIc">📸</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> shared a new moment'+time+'</span></div>';
         var txt=it.text.length>60?it.text.slice(0,60)+"…":it.text;
         return '<div class="notifItem"><span class="nIc">💬</span><span class="nTx"><b>'+escapeHtml(it.name)+'</b> commented: “'+escapeHtml(txt)+'”'+time+'</span></div>';
       }).join("");
     } else {
-      l.innerHTML='<div class="notifItem"><span class="nIc">🌍</span><span class="nTx">Nothing yet.<br>When people appreciate or comment on your posts — or a connection shares something new — it shows here.</span></div>';
+      l.innerHTML='<div class="notifItem"><span class="nIc">🌍</span><span class="nTx">Nothing yet.<br>When people appreciate or comment on your posts, it shows here.</span></div>';
     }
     $("notifOverlay").classList.remove("hide");
     try{ localStorage.setItem(notifSeenKey(),new Date().toISOString()); }catch(e){}
@@ -1473,7 +1483,7 @@
     else{ds+=discover.map(function(x){if(x.sent)return personRow(x.p,'<span class="pill">Requested</span>');return personRow(x.p,'<button class="pbtn connect" onclick="sendRequest(\''+x.p.id+'\')">Connect</button>');}).join("");}
     $("discoverSection").innerHTML=ds;
   }
-  async function sendRequest(otherId){try{const {error}=await sb.from("connections").insert({requester_id:currentUser.id,addressee_id:otherId,status:"pending"});if(error)throw error;loadPeople();}catch(err){setPeopleMsg("Couldn't send request: "+(err.message||err),"err");}}
+  async function sendRequest(otherId){if(!currentUser)return promptSignup("Sign up to connect 🌍");try{const {error}=await sb.from("connections").insert({requester_id:currentUser.id,addressee_id:otherId,status:"pending"});if(error)throw error;loadPeople();}catch(err){setPeopleMsg("Couldn't send request: "+(err.message||err),"err");}}
   async function acceptRequest(connId){try{const {error}=await sb.from("connections").update({status:"accepted"}).eq("id",connId);if(error)throw error;loadPeople();}catch(err){setPeopleMsg("Couldn't accept: "+(err.message||err),"err");}}
 
   document.addEventListener("input",function(e){if(e.target&&e.target.id==="postText"){$("count").textContent=e.target.value.length+" / 500";}});
@@ -1887,7 +1897,7 @@
       var o=$("pwResetOverlay"); if(o){ o.classList.remove("hide"); }
     }
   });
-  (async function(){const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user);})();
+  (async function(){const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user); else { try{ await enterGuest(); }catch(e){} } })();
 </script>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
     <linearGradient id="eaCommentGrad" x1="0" y1="0" x2="1" y2="1">
