@@ -536,9 +536,11 @@
         </div>
         <button class="share" id="shareBtn" onclick="createPost()">Share</button>
       </div>
+      <div id="photoExtras" class="hide">
       <input id="postPlace" class="placeInput" type="text" maxlength="60" placeholder="📍 Where's this from? · optional" aria-label="Where is this photo from (optional)" />
       <div class="placeHint">A town, city or country is perfect — no need for your exact address. 🌍</div>
       <label class="planetToggle"><input type="checkbox" id="postPlanet" /> <span>🌿 A moment for our planet</span></label>
+      </div>
       <input id="fileInput" type="file" accept="image/*" class="hide" />
       <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hide" />
       <input id="avatarGal" type="file" accept="image/*" class="hide" />
@@ -1298,7 +1300,7 @@
       img.onerror=function(){URL.revokeObjectURL(url);reject(new Error("Could not read that image"));};
       img.src=url;});
   }
-  function clearPhoto(){pendingFile=null;$("fileInput").value="";var ci=$("cameraInput");if(ci)ci.value="";$("preview").classList.add("hide");$("previewImg").src="";}
+  function clearPhoto(){pendingFile=null;$("fileInput").value="";var ci=$("cameraInput");if(ci)ci.value="";$("preview").classList.add("hide");$("previewImg").src="";var pe=$("photoExtras");if(pe)pe.classList.add("hide");if($("postPlace"))$("postPlace").value="";if($("postPlanet"))$("postPlanet").checked=false;}
   async function createPost(){
     const text=$("postText").value.trim();
     if(!text&&!pendingFile&&!pendingMusic){setAppMsg("Write something, add a photo, or attach music first.","err");return;}
@@ -1557,7 +1559,7 @@
   async function acceptRequest(connId){try{const {error}=await sb.from("connections").update({status:"accepted"}).eq("id",connId);if(error)throw error;loadPeople();}catch(err){setPeopleMsg("Couldn't accept: "+(err.message||err),"err");}}
 
   document.addEventListener("input",function(e){if(e.target&&e.target.id==="postText"){$("count").textContent=e.target.value.length+" / 500";}});
-  function onFilePicked(e){const f=e.target.files&&e.target.files[0];if(!f)return;pendingFile=f;$("previewImg").src=URL.createObjectURL(f);$("preview").classList.remove("hide");}
+  function onFilePicked(e){const f=e.target.files&&e.target.files[0];if(!f)return;pendingFile=f;$("previewImg").src=URL.createObjectURL(f);var pe=$("photoExtras");if(pe)pe.classList.remove("hide");$("preview").classList.remove("hide");}
   $("fileInput").addEventListener("change",onFilePicked);
   $("cameraInput").addEventListener("change",onFilePicked);
 
