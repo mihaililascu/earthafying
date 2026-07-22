@@ -349,6 +349,9 @@
 .guestWelcome .gwJoin{margin-top:16px;background:linear-gradient(120deg,var(--coral),var(--amber));color:#fff;border:none;padding:13px 44px;border-radius:999px;font-weight:800;font-size:1.02rem;cursor:pointer;box-shadow:0 6px 22px rgba(255,138,101,.35)}
 .guestWelcome .gwJoin:active{filter:brightness(1.08)}
 .guestWelcome .gwNote{margin-top:12px;font-size:.76rem;color:var(--muted);opacity:.85}
+.placeSelect{width:100%;margin-top:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-family:inherit;font-size:.92rem;-webkit-appearance:none;appearance:none}
+.placeSelect:focus{outline:none;border-color:var(--leaf);color:var(--text)}
+.postPlace{font-size:.85rem;color:var(--muted);margin:8px 2px 0;display:flex;align-items:center;gap:4px}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -523,6 +526,7 @@
         </div>
         <button class="share" id="shareBtn" onclick="createPost()">Share</button>
       </div>
+      <select id="postPlace" class="placeSelect" aria-label="Where is this photo from (optional)"><option value="">📍 Where's this from? · optional</option></select>
       <input id="fileInput" type="file" accept="image/*" class="hide" />
       <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hide" />
       <input id="avatarGal" type="file" accept="image/*" class="hide" />
@@ -653,16 +657,19 @@
   function flagEmoji(cc){ if(!cc||cc.length!==2)return ""; var A=127397; return cc.toUpperCase().replace(/[A-Z]/g,function(ch){return String.fromCodePoint(A+ch.charCodeAt(0));}); }
   function fillCountrySelect(el,current){ if(!el)return; var h='<option value="">🌍 Prefer not to say</option>'; for(var i=0;i<COUNTRIES.length;i++){var c=COUNTRIES[i];h+='<option value="'+c[0]+'"'+(current===c[0]?" selected":"")+'>'+flagEmoji(c[0])+" "+c[1]+'</option>';} el.value=current||""; el.innerHTML=h; el.value=current||""; }
   function parsePost(content){
-    var c=content||"", country=null, music=null, pulse=null;
+    var c=content||"", country=null, music=null, pulse=null, place=null;
     var wm=c.match(/\[\[WP:(\d{8})\]\]/);
     if(wm){ pulse=wm[1]; c=c.replace(wm[0],""); }
     var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
     if(cm){ country=cm[1].toUpperCase(); c=c.replace(cm[0],""); }
+    var lm=c.match(/\[\[LOC:([A-Za-z]{2})\]\]/);
+    if(lm){ place=lm[1].toUpperCase(); c=c.replace(lm[0],""); }
     var i=c.indexOf("[[MUSIC]]");
     if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
-    return {caption:c.trim(), music:music, country:country, pulse:pulse};
+    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place};
   }
   function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
+  function populatePlaces(){ var s=$("postPlace"); if(!s||s._filled)return; s._filled=1; try{ for(var i=0;i<COUNTRIES.length;i++){ var o=document.createElement("option"); o.value=COUNTRIES[i][0]; o.textContent=COUNTRIES[i][1]; s.appendChild(o); } }catch(e){} }
   var COUNTRY_MAP=null;
   function countryName(cc){ if(!COUNTRY_MAP){COUNTRY_MAP={};for(var i=0;i<COUNTRIES.length;i++)COUNTRY_MAP[COUNTRIES[i][0]]=COUNTRIES[i][1];} return COUNTRY_MAP[cc]||cc; }
   var flagToastTimer=null;
@@ -1012,13 +1019,14 @@
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
       const music=parsedM.music?('<div class="musicWrap">'+musicEmbedHtml(parsedM.music)+'</div>'):'';
+      const place=parsedM.place?'<div class="postPlace">📍 '+escapeHtml(countryName(parsedM.place))+'</div>':'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
         ((currentUser&&p.user_id===currentUser.id)?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
-        img+body+music+
+        img+place+body+music+
         '<div class="actions" id="actions-'+p.id+'">'+renderActions(p.id)+'</div>'+
         '<div class="comments hide" id="comments-'+p.id+'">'+
           '<div class="clist" id="clist-'+p.id+'">'+renderCommentList(p.id)+'</div>'+
@@ -1141,6 +1149,7 @@
     var content=text;
     if(parsed.music){ content=(text?text+"\n":"")+"[[MUSIC]]"+parsed.music; }
     if(parsed.country){ content="[[C:"+parsed.country+"]]"+content; }
+    if(parsed.place){ content="[[LOC:"+parsed.place+"]]"+content; }
     if(parsed.pulse){ content="[[WP:"+parsed.pulse+"]]"+content; }
     try{
       var r=await sb.from("posts").update({content:content}).eq("id",editingPostId).eq("user_id",currentUser.id);
@@ -1295,11 +1304,13 @@
       if(pendingMusic){ finalContent=(text?text+"\n":"")+"[[MUSIC]]"+pendingMusic; }
       var cc=myCountry();
       if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
+      var pl=$("postPlace")?$("postPlace").value:"";
+      if(pl){ finalContent="[[LOC:"+pl+"]]"+finalContent; }
       if(pendingPulse){ finalContent="[[WP:"+pulseKey()+"]]"+finalContent; }
       setAppMsg("Sharing…");
       const {error}=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:imageUrl});
       if(error)throw error;
-      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();clearPulse();setAppMsg("");
+      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();clearPulse();if($("postPlace"))$("postPlace").value="";setAppMsg("");
       await loadFeed();
       pulseState();
     }catch(err){setAppMsg("Couldn't share: "+(err.message||err),"err");}
@@ -1475,8 +1486,9 @@
     var img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="openPhoto(this.src)" alt="moment" />':'';
     var body=(parsed.caption&&parsed.caption.trim())?'<div class="body">'+escapeHtml(parsed.caption)+'</div>':'';
     var music=parsed.music?('<div class="musicWrap">'+musicEmbedHtml(parsed.music)+'</div>'):'';
+    var place=parsed.place?'<div class="postPlace">📍 '+escapeHtml(countryName(parsed.place))+'</div>':'';
     var nm=escapeHtml(p.author_name||"Someone")+flagTag(parsed.country);
-    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+body+music+connReactBtn(p.id)+'</div>';
+    return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+place+body+music+connReactBtn(p.id)+'</div>';
   }
   function closeConnectionsPage(){
     $("connectionsPage").classList.add("hide");
@@ -1931,7 +1943,7 @@
       var o=$("pwResetOverlay"); if(o){ o.classList.remove("hide"); }
     }
   });
-  (async function(){const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user); else { try{ await enterGuest(); }catch(e){} } })();
+  (async function(){ try{populatePlaces();}catch(e){} const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user); else { try{ await enterGuest(); }catch(e){} } })();
 </script>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
     <linearGradient id="eaCommentGrad" x1="0" y1="0" x2="1" y2="1">
