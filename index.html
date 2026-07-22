@@ -118,7 +118,7 @@
   .mutePill.on{background:rgba(255,111,97,.14);border-color:rgba(255,111,97,.5);color:var(--coral)}
   .editPost{color:var(--muted)!important;border-color:var(--border)!important;background:transparent!important;margin-right:6px}
   .pulseActions{margin-top:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .pulseBtn{background:linear-gradient(120deg,var(--coral),var(--amber));border:none;color:#fff;border-radius:20px;padding:9px 16px;font-family:inherit;font-weight:700;font-size:.88rem;cursor:pointer}
+  .pulseBtn{background:rgba(255,178,77,.14);border:1px solid rgba(255,178,77,.42);color:var(--amber);border-radius:20px;padding:9px 18px;font-family:inherit;font-weight:700;font-size:.86rem;cursor:pointer}
   .pulseBtn:active{transform:scale(.98)}
   .pulseIn{color:var(--leaf);font-weight:700;font-size:.9rem}
   .pulseGallery{margin-top:12px}
@@ -143,8 +143,8 @@
   .aOn{color:#4ade80;font-weight:700;font-size:.78rem}
 
   .nav{position:sticky;top:53px;z-index:5;display:flex;gap:8px;background:var(--bg);padding:10px 12px 14px;margin-bottom:6px}
-  .nav button{flex:1;font-family:inherit;font-size:.95rem;font-weight:600;padding:10px;border:1px solid var(--border);border-radius:24px;cursor:pointer;background:transparent;color:var(--muted);position:relative}
-  .nav button.active{background:var(--surface2);color:var(--text);border-color:var(--leaf)}
+  .nav button{flex:1;font-family:inherit;font-size:.92rem;font-weight:600;padding:9px 6px;border:1px solid transparent;border-radius:22px;cursor:pointer;background:transparent;color:var(--muted);position:relative;transition:color .15s ease,background .15s ease}
+  .nav button.active{background:rgba(95,196,107,.15);color:var(--leaf);border-color:transparent}
   .badge{display:inline-block;min-width:19px;height:19px;line-height:19px;border-radius:10px;background:var(--coral);color:#fff;font-size:.72rem;font-weight:700;margin-left:6px;padding:0 5px}
 
   .compose{background:var(--surface);border:none;border-radius:0;padding:16px;margin-bottom:8px}
@@ -208,7 +208,7 @@
   .post .body{font-size:1rem;line-height:1.55;white-space:pre-wrap;word-break:break-word}
   .empty{text-align:center;color:var(--muted);font-size:.95rem;padding:30px 10px;line-height:1.6}
 
-  .moment{background:linear-gradient(135deg,rgba(255,178,77,.14),rgba(95,196,107,.12));border:none;border-radius:0;padding:16px 18px;margin-bottom:8px}
+  .moment{background:rgba(255,178,77,.06);border:1px solid var(--border);border-radius:16px;padding:16px 18px;margin:0 2px 12px}
   .moment .ml{display:flex;align-items:center;gap:7px;font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:7px}
   .moment .mp{font-family:'Fraunces',serif;font-size:1.18rem;font-weight:600;line-height:1.35;color:var(--text)}
   .actions{display:flex;gap:18px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border)}
@@ -476,7 +476,7 @@
     <div class="tbRight">
       <button class="helpIcon" onclick="openNotifs()" aria-label="Notifications" style="position:relative"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span id="notifBadge" class="notifBadge hide">0</span></button>
       <button class="helpIcon" onclick="openHelp()" aria-label="Help and support"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/><path d="M9.8 9.4a2.2 2.2 0 0 1 4.2.9c0 1.5-2 1.8-2 3"/><circle cx="12" cy="16.3" r=".6" fill="currentColor" stroke="none"/></svg></button>
-      <button class="logout" id="logoutBtn" onclick="logout()">Log out</button><button class="logout" id="guestJoin" onclick="promptSignup()" style="display:none">Sign up</button>
+      <button class="logout" id="guestJoin" onclick="promptSignup()" style="display:none">Sign up</button>
     </div>
   </div>
 
@@ -2047,6 +2047,7 @@
           <button class="helpItem" onclick="installApp()"><span class="hi-ic">📲</span><span class="hi-tx"><b>Add to Home Screen</b><span>Get the Earthafying web app — no App Store needed</span></span></button>
           <button class="helpItem" onclick="closeHelp();openPrivacy(event)"><span class="hi-ic">🔒</span><span class="hi-tx"><b>Privacy &amp; Safety</b><span>Your data, plainly explained</span></span></button>
           <button class="helpItem" onclick="closeHelp();openTerms(event)"><span class="hi-ic">📄</span><span class="hi-tx"><b>Community Guidelines &amp; Terms</b><span>How we keep Earthafying kind &amp; safe</span></span></button>
+          <button class="helpItem" onclick="logout()"><span class="hi-ic">🚪</span><span class="hi-tx"><b>Log out</b><span>Sign out of your account</span></span></button>
         </div>
       </div>
     </div>
