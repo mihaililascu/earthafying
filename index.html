@@ -599,7 +599,8 @@
       <div class="statCard"><div class="statNum" id="stPosts">—</div><div class="statLbl">Posts</div><div class="statSub" id="stPostsToday"></div></div>
       <div class="statCard"><div class="statNum" id="stComments">—</div><div class="statLbl">Comments</div><div class="statSub" id="stCommentsToday"></div></div>
       <div class="statCard"><div class="statNum" id="stLikes">—</div><div class="statLbl">Appreciations</div><div class="statSub" id="stLikesToday"></div></div>
-            <div class="statCard"><div class="statNum" id="stGuests">—</div><div class="statLbl">👀 Guest visits</div><div class="statSub" id="stGuestsToday"></div></div>
+            <div class="statCard"><div class="statNum" id="stGuests">—</div><div class="statLbl">🌐 Visitors</div><div class="statSub" id="stGuestsToday"></div></div>
+            <div class="statCard"><div class="statNum" id="stGuestsOnly">—</div><div class="statLbl">👀 Guest visits</div><div class="statSub" id="stGuestsOnlyToday"></div></div>
     </div>
     <h3 class="gridHead">People — live view</h3>
     <div id="adminUsers" class="adminList"><div class="gridEmpty">Loading…</div></div>
@@ -900,12 +901,12 @@
 
   async function enterGuest(){
     currentUser=null;
-    try{ if(!sessionStorage.getItem("ea_guest_ev")){ sessionStorage.setItem("ea_guest_ev","1"); if(window.va) window.va("event",{name:"guest_visit"}); try{ sb.from("visits").insert({}); }catch(_){} } }catch(e){ try{ if(window.va) window.va("event",{name:"guest_visit"}); }catch(_){} }
+    try{ if(!sessionStorage.getItem("ea_guest_ev")){ sessionStorage.setItem("ea_guest_ev","1"); if(window.va) window.va("event",{name:"guest_visit"}); } }catch(e){ try{ if(window.va) window.va("event",{name:"guest_visit"}); }catch(_){} }
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
     var gj=$("guestJoin"),lo=$("logoutBtn");if(gj)gj.style.display="";if(lo)lo.style.display="none";
     var na=$("navAdmin"); if(na) na.classList.add("hide");
     var gw=$("guestWelcome");if(gw)gw.classList.remove("hide");var cb=$("composeBox");if(cb)cb.style.display="none";
-    showViewInternal("feed");setMoment();
+    showViewInternal("feed");setMoment();try{logVisit("guest");}catch(e){}
     window.scrollTo(0,0); try{ startAutoGlide(); }catch(e){}
     try{ await loadFeed(); }catch(e){}
   }
@@ -922,7 +923,7 @@
     $("myName").textContent=firstName(name);$("myAvatar").textContent=initialOf(name);
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
     var gj=$("guestJoin"),lo=$("logoutBtn"),bb=$("browseBack");if(gj)gj.style.display="none";if(lo)lo.style.display="";if(bb)bb.classList.add("hide");var gw2=$("guestWelcome");if(gw2)gw2.classList.add("hide");var cb2=$("composeBox");if(cb2)cb2.style.display="";
-    switchView("feed");setMoment();
+    switchView("feed");setMoment();try{logVisit("member");}catch(e){}
     var na=$("navAdmin"); if(na) na.classList.toggle("hide",!isAdmin());
     window.scrollTo(0,0); startAutoGlide();
     try{ await sb.from("profiles").upsert({id:user.id,full_name:name}); }catch(e){}
@@ -1192,6 +1193,8 @@
     var ct=await cntToday("comments"); $("stCommentsToday").textContent=ct==null?"":("+"+ct+" today");
     var lt=await cntToday("likes"); $("stLikesToday").textContent=lt==null?"":("+"+lt+" today");
     var gvt=await cntToday("visits"); $("stGuestsToday").textContent=gvt==null?"":("+"+gvt+" today");
+    try{ var gq=await sb.from("visits").select("id",{count:"exact",head:true}).eq("kind","guest"); $("stGuestsOnly").textContent=(gq.count==null?"—":gq.count); }catch(e){ $("stGuestsOnly").textContent="—"; }
+    try{ var gqt=await sb.from("visits").select("id",{count:"exact",head:true}).eq("kind","guest").gte("created_at",todayISO); $("stGuestsOnlyToday").textContent=(gqt.count==null?"":("+"+gqt.count+" today")); }catch(e){}
     var ut=await cntToday("profiles"); $("stUsersToday").textContent=ut==null?"":("+"+ut+" today");
     var flagMap={};
     try{
@@ -1964,6 +1967,7 @@
       var o=$("pwResetOverlay"); if(o){ o.classList.remove("hide"); }
     }
   });
+  function logVisit(kind){ try{ if(!sessionStorage.getItem("ea_visit")){ sessionStorage.setItem("ea_visit","1"); sb.from("visits").insert({kind:kind||"guest"}); } }catch(e){} }
   (async function(){ try{populatePlaces();}catch(e){} const {data}=await sb.auth.getSession();if(data.session) await enterApp(data.session.user); else { try{ await enterGuest(); }catch(e){} } })();
 </script>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
