@@ -356,6 +356,12 @@
 .placeInput::placeholder{color:var(--muted)}
 .placeInput:focus{outline:none;border-color:var(--leaf)}
 .placeHint{font-size:.74rem;color:var(--muted);margin:6px 2px 0;opacity:.85}
+.planetToggle{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.9rem;color:var(--muted);cursor:pointer;user-select:none}
+.planetToggle input{width:17px;height:17px;accent-color:#3bbf6e;cursor:pointer}
+.feedFilter{display:flex;gap:8px;margin:0 2px 12px}
+.ffPill{background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:6px 16px;font-family:inherit;font-size:.85rem;font-weight:600;cursor:pointer}
+.ffPill.active{background:rgba(59,191,110,.16);color:#7fe0a8;border-color:rgba(59,191,110,.4)}
+.planetBadge{display:inline-block;margin-left:8px;background:rgba(59,191,110,.16);color:#7fe0a8;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;vertical-align:middle}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -532,6 +538,7 @@
       </div>
       <input id="postPlace" class="placeInput" type="text" maxlength="60" placeholder="📍 Where's this from? · optional" aria-label="Where is this photo from (optional)" />
       <div class="placeHint">A town, city or country is perfect — no need for your exact address. 🌍</div>
+      <label class="planetToggle"><input type="checkbox" id="postPlanet" /> <span>🌿 A moment for our planet</span></label>
       <input id="fileInput" type="file" accept="image/*" class="hide" />
       <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hide" />
       <input id="avatarGal" type="file" accept="image/*" class="hide" />
@@ -539,6 +546,7 @@
     </div>
     <div class="appMsg" id="appMsg"></div>
     <div class="feedTitle">The feed</div>
+    <div class="feedFilter" id="feedFilter"><button class="ffPill active" id="ffAll" onclick="setFeedFilter('all')">All</button><button class="ffPill" id="ffPlanet" onclick="setFeedFilter('planet')">🌿 Planet</button></div>
     <div id="feed"></div>
     <div class="feedEnd hide" id="feedEnd">
       <div class="fe-globe"></div>
@@ -662,16 +670,17 @@
   function flagEmoji(cc){ if(!cc||cc.length!==2)return ""; var A=127397; return cc.toUpperCase().replace(/[A-Z]/g,function(ch){return String.fromCodePoint(A+ch.charCodeAt(0));}); }
   function fillCountrySelect(el,current){ if(!el)return; var h='<option value="">🌍 Prefer not to say</option>'; for(var i=0;i<COUNTRIES.length;i++){var c=COUNTRIES[i];h+='<option value="'+c[0]+'"'+(current===c[0]?" selected":"")+'>'+flagEmoji(c[0])+" "+c[1]+'</option>';} el.value=current||""; el.innerHTML=h; el.value=current||""; }
   function parsePost(content){
-    var c=content||"", country=null, music=null, pulse=null, place=null;
+    var c=content||"", country=null, music=null, pulse=null, place=null, planet=false;
     var wm=c.match(/\[\[WP:(\d{8})\]\]/);
     if(wm){ pulse=wm[1]; c=c.replace(wm[0],""); }
     var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
     if(cm){ country=cm[1].toUpperCase(); c=c.replace(cm[0],""); }
     var lm=c.match(/\[\[LOC:([\s\S]*?)\]\]/);
     if(lm){ place=lm[1].trim(); c=c.replace(lm[0],""); }
+    if(c.indexOf("[[PLANET]]")>=0){ planet=true; c=c.replace("[[PLANET]]",""); }
     var i=c.indexOf("[[MUSIC]]");
     if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
-    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place};
+    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place, planet:planet};
   }
   function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
   function populatePlaces(){ var s=$("postPlace"); if(!s||s.tagName!=="SELECT"||s._filled)return; s._filled=1; try{ for(var i=0;i<COUNTRIES.length;i++){ var o=document.createElement("option"); o.value=COUNTRIES[i][0]; o.textContent=COUNTRIES[i][1]; s.appendChild(o); } }catch(e){} }
@@ -1014,9 +1023,13 @@
         '<span class="ctime">'+timeAgo(c.created_at)+'</span></div>';
     }).join("");
   }
+  var _feedPosts=[], feedFilter="all";
+  function setFeedFilter(f){ feedFilter=f; var a=$("ffAll"),pp=$("ffPlanet"); if(a)a.classList.toggle("active",f==="all"); if(pp)pp.classList.toggle("active",f==="planet"); renderFeed(_feedPosts); }
   function renderFeed(posts){
     const feed=$("feed");
-    if(!posts.length){feed.innerHTML='<div class="empty">No moments yet.<br>Be the first to share something with the world. 🌍</div>';return;}
+    _feedPosts=posts;
+    if(feedFilter==="planet"){ posts=posts.filter(function(p){return parsePost(p.content||"").planet;}); }
+    if(!posts.length){feed.innerHTML=(feedFilter==="planet")?'<div class="empty">No planet moments yet.<br>Tag one with 🌿 when you share something for our home. 🌍</div>':'<div class="empty">No moments yet.<br>Be the first to share something with the world. 🌍</div>';return;}
     feed.innerHTML=posts.map(function(p){
       state.postById=state.postById||{}; state.postById[p.id]=p;
       const parsedM=parsePost(p.content||"");
@@ -1025,9 +1038,10 @@
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
       const music=parsedM.music?('<div class="musicWrap">'+musicEmbedHtml(parsedM.music)+'</div>'):'';
       const place=parsedM.place?'<div class="postPlace">📍 '+escapeHtml(parsedM.place)+'</div>':'';
+      const planetBadge=parsedM.planet?'<span class="planetBadge">🌿 Planet</span>':'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
-        '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
+        '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+planetBadge+
         ((currentUser&&p.user_id===currentUser.id)?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
@@ -1155,6 +1169,7 @@
     if(parsed.music){ content=(text?text+"\n":"")+"[[MUSIC]]"+parsed.music; }
     if(parsed.country){ content="[[C:"+parsed.country+"]]"+content; }
     if(parsed.place){ content="[[LOC:"+parsed.place+"]]"+content; }
+    if(parsed.planet){ content="[[PLANET]]"+content; }
     if(parsed.pulse){ content="[[WP:"+parsed.pulse+"]]"+content; }
     try{
       var r=await sb.from("posts").update({content:content}).eq("id",editingPostId).eq("user_id",currentUser.id);
@@ -1311,11 +1326,12 @@
       if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
       var pl=$("postPlace")?$("postPlace").value.trim().replace(/[\[\]]/g,"").slice(0,60):"";
       if(pl){ finalContent="[[LOC:"+pl+"]]"+finalContent; }
+      if($("postPlanet")&&$("postPlanet").checked){ finalContent="[[PLANET]]"+finalContent; }
       if(pendingPulse){ finalContent="[[WP:"+pulseKey()+"]]"+finalContent; }
       setAppMsg("Sharing…");
       const {error}=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:imageUrl});
       if(error)throw error;
-      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();clearPulse();if($("postPlace"))$("postPlace").value="";setAppMsg("");
+      $("postText").value="";$("count").textContent="0 / 500";clearPhoto();clearMusic();clearPulse();if($("postPlace"))$("postPlace").value="";if($("postPlanet"))$("postPlanet").checked=false;setAppMsg("");
       await loadFeed();
       pulseState();
     }catch(err){setAppMsg("Couldn't share: "+(err.message||err),"err");}
