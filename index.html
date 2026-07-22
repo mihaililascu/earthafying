@@ -352,6 +352,10 @@
 .placeSelect{width:100%;margin-top:8px;background:var(--surface2);color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-family:inherit;font-size:.92rem;-webkit-appearance:none;appearance:none}
 .placeSelect:focus{outline:none;border-color:var(--leaf);color:var(--text)}
 .postPlace{font-size:.85rem;color:var(--muted);margin:8px 2px 0;display:flex;align-items:center;gap:4px}
+.placeInput{width:100%;margin-top:8px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:11px 12px;font-family:inherit;font-size:.92rem}
+.placeInput::placeholder{color:var(--muted)}
+.placeInput:focus{outline:none;border-color:var(--leaf)}
+.placeHint{font-size:.74rem;color:var(--muted);margin:6px 2px 0;opacity:.85}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -526,7 +530,8 @@
         </div>
         <button class="share" id="shareBtn" onclick="createPost()">Share</button>
       </div>
-      <select id="postPlace" class="placeSelect" aria-label="Where is this photo from (optional)"><option value="">📍 Where's this from? · optional</option></select>
+      <input id="postPlace" class="placeInput" type="text" maxlength="60" placeholder="📍 Where's this from? · optional" aria-label="Where is this photo from (optional)" />
+      <div class="placeHint">A town, city or country is perfect — no need for your exact address. 🌍</div>
       <input id="fileInput" type="file" accept="image/*" class="hide" />
       <input id="cameraInput" type="file" accept="image/*" capture="environment" class="hide" />
       <input id="avatarGal" type="file" accept="image/*" class="hide" />
@@ -662,14 +667,14 @@
     if(wm){ pulse=wm[1]; c=c.replace(wm[0],""); }
     var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
     if(cm){ country=cm[1].toUpperCase(); c=c.replace(cm[0],""); }
-    var lm=c.match(/\[\[LOC:([A-Za-z]{2})\]\]/);
-    if(lm){ place=lm[1].toUpperCase(); c=c.replace(lm[0],""); }
+    var lm=c.match(/\[\[LOC:([\s\S]*?)\]\]/);
+    if(lm){ place=lm[1].trim(); c=c.replace(lm[0],""); }
     var i=c.indexOf("[[MUSIC]]");
     if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
     return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place};
   }
   function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
-  function populatePlaces(){ var s=$("postPlace"); if(!s||s._filled)return; s._filled=1; try{ for(var i=0;i<COUNTRIES.length;i++){ var o=document.createElement("option"); o.value=COUNTRIES[i][0]; o.textContent=COUNTRIES[i][1]; s.appendChild(o); } }catch(e){} }
+  function populatePlaces(){ var s=$("postPlace"); if(!s||s.tagName!=="SELECT"||s._filled)return; s._filled=1; try{ for(var i=0;i<COUNTRIES.length;i++){ var o=document.createElement("option"); o.value=COUNTRIES[i][0]; o.textContent=COUNTRIES[i][1]; s.appendChild(o); } }catch(e){} }
   var COUNTRY_MAP=null;
   function countryName(cc){ if(!COUNTRY_MAP){COUNTRY_MAP={};for(var i=0;i<COUNTRIES.length;i++)COUNTRY_MAP[COUNTRIES[i][0]]=COUNTRIES[i][1];} return COUNTRY_MAP[cc]||cc; }
   var flagToastTimer=null;
@@ -1019,7 +1024,7 @@
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
       const music=parsedM.music?('<div class="musicWrap">'+musicEmbedHtml(parsedM.music)+'</div>'):'';
-      const place=parsedM.place?'<div class="postPlace">📍 '+escapeHtml(countryName(parsedM.place))+'</div>':'';
+      const place=parsedM.place?'<div class="postPlace">📍 '+escapeHtml(parsedM.place)+'</div>':'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+
@@ -1304,7 +1309,7 @@
       if(pendingMusic){ finalContent=(text?text+"\n":"")+"[[MUSIC]]"+pendingMusic; }
       var cc=myCountry();
       if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
-      var pl=$("postPlace")?$("postPlace").value:"";
+      var pl=$("postPlace")?$("postPlace").value.trim().replace(/[\[\]]/g,"").slice(0,60):"";
       if(pl){ finalContent="[[LOC:"+pl+"]]"+finalContent; }
       if(pendingPulse){ finalContent="[[WP:"+pulseKey()+"]]"+finalContent; }
       setAppMsg("Sharing…");
@@ -1486,7 +1491,7 @@
     var img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" loading="lazy" onclick="openPhoto(this.src)" alt="moment" />':'';
     var body=(parsed.caption&&parsed.caption.trim())?'<div class="body">'+escapeHtml(parsed.caption)+'</div>':'';
     var music=parsed.music?('<div class="musicWrap">'+musicEmbedHtml(parsed.music)+'</div>'):'';
-    var place=parsed.place?'<div class="postPlace">📍 '+escapeHtml(countryName(parsed.place))+'</div>':'';
+    var place=parsed.place?'<div class="postPlace">📍 '+escapeHtml(parsed.place)+'</div>':'';
     var nm=escapeHtml(p.author_name||"Someone")+flagTag(parsed.country);
     return '<div class="connCard"><div class="head">'+avatarTag(p.author_name)+'<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div></div>'+img+place+body+music+connReactBtn(p.id)+'</div>';
   }
