@@ -406,6 +406,19 @@
 .storyPublish{width:100%;background:linear-gradient(120deg,var(--coral),var(--amber));color:#fff;border:none;border-radius:999px;padding:16px;font-family:inherit;font-weight:800;font-size:1.05rem;cursor:pointer;box-shadow:0 8px 24px rgba(255,138,101,.28)}
 .storyPublish:disabled{opacity:.55}
 .postStoryTitle{font-family:'Anton',sans-serif;font-weight:400;font-size:1.7rem;text-transform:uppercase;letter-spacing:.015em;color:var(--text);margin:2px 0 10px;line-height:1.06}
+.createSheet{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center}
+.createSheet .csCard{width:100%;max-width:520px;background:#151b12;border-top-left-radius:24px;border-top-right-radius:24px;border:1px solid var(--border);border-bottom:none;padding:22px 18px 30px;position:relative;animation:csUp .2s ease}
+@keyframes csUp{from{transform:translateY(28px);opacity:.5}to{transform:translateY(0);opacity:1}}
+.csClose{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:1.15rem;cursor:pointer}
+.csTitle{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:800;color:var(--text);margin-bottom:4px}
+.csSub{color:var(--muted);font-size:.92rem;margin-bottom:16px}
+.csOpt{width:100%;display:flex;align-items:center;gap:14px;text-align:left;background:var(--surface2);border:1px solid var(--border);border-radius:16px;padding:15px 16px;margin-bottom:10px;cursor:pointer;font-family:inherit}
+.csOpt .csIc{font-size:1.55rem;line-height:1}
+.csOpt .csTx{display:flex;flex-direction:column}
+.csOpt .csTx b{color:var(--text);font-size:1.02rem}
+.csOpt .csTx span{color:var(--muted);font-size:.82rem;margin-top:2px}
+.csOpt:active{border-color:var(--leaf)}
+.hhBrowse{display:inline-block;margin-top:14px;background:none;border:none;color:var(--muted);font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -541,7 +554,17 @@
     <button id="navAdmin" class="hide" onclick="switchView('admin')">Admin</button>
   </div>
 
-  <div id="storyView" class="hide">
+  <div id="createSheet" class="createSheet hide" onclick="if(event.target===this)closeCreate()">
+      <div class="csCard">
+        <button class="csClose" onclick="closeCreate()">✕</button>
+        <div class="csTitle">Share something</div>
+        <div class="csSub">What would you like to add to the world?</div>
+        <button class="csOpt" onclick="openCreate('photo')"><span class="csIc">📷</span><span class="csTx"><b>A photo</b><span>One honest moment, shared quick</span></span></button>
+        <button class="csOpt" onclick="openCreate('story')"><span class="csIc">✍️</span><span class="csTx"><b>A story</b><span>A title, a photo, and the story behind it</span></span></button>
+        <button class="csOpt" onclick="openCreate('album')"><span class="csIc">🖼️</span><span class="csTx"><b>An album</b><span>A few photos together · coming soon</span></span></button>
+      </div>
+    </div>
+    <div id="storyView" class="hide">
       <div class="storyWrap">
         <button class="storyBack" onclick="switchView('home')">← Back</button>
         <div class="storyKicker" id="storyKicker">Share your story</div>
@@ -562,7 +585,8 @@
         <div class="hhKicker">🌍 Earthafying</div>
         <h1 class="hhTitle">We're all<br>from here.</h1>
         <p class="hhSub">One honest moment from your corner of the world — and a window into everyone else's. Free, forever.</p>
-        <button class="hhCta" onclick="switchView('feed')">See today's world →</button>
+        <button class="hhCta" onclick="openCreateSheet()">＋ Share something</button>
+        <button class="hhBrowse" onclick="switchView('feed')">or just look around the feed →</button>
       </section>
       <div class="homeSection">
         <div class="homeSectionTitle">Stories from our home</div>
@@ -1076,6 +1100,15 @@
       switchView("feed");
     }catch(err){ if($("storyMsg"))$("storyMsg").textContent="Couldn't publish: "+(err.message||err); }
     if(btn) btn.disabled=false;
+  }
+  function openCreateSheet(){ var s=$("createSheet"); if(s) s.classList.remove("hide"); }
+  function closeCreate(){ var s=$("createSheet"); if(s) s.classList.add("hide"); }
+  function openCreate(type){
+    closeCreate();
+    if(type==="story"){ openStory(); return; }
+    if(type==="album"){ alert("Albums are coming next — I'm building them for you. 🖼️"); return; }
+    switchView("feed");
+    setTimeout(function(){ var t=$("postText"); if(t){ t.focus(); } },140);
   }
   async function loadHome(){
     var el=$("homeMoments"); if(!el) return;
