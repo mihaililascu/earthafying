@@ -387,6 +387,24 @@
 .homeJoin{text-align:center;padding:44px 20px 8px;margin-top:16px}
 .homeJoin h2{font-family:'Fraunces',serif;font-size:2rem;color:var(--text);margin:0 0 10px;font-weight:800}
 .homeJoin p{color:var(--muted);max-width:34ch;margin:0 auto 6px;line-height:1.5}
+#storyView{min-height:100vh}
+.storyWrap{max-width:640px;margin:0 auto;padding:22px 18px 64px}
+.storyBack{background:none;border:none;color:var(--muted);font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:16px}
+.storyKicker{font-size:.76rem;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-bottom:12px}
+.storyTitle{width:100%;background:none;border:none;color:var(--text);font-family:'Fraunces',serif;font-size:clamp(2rem,8vw,2.7rem);font-weight:800;line-height:1.05;letter-spacing:-.01em;padding:0;margin-bottom:18px}
+.storyTitle::placeholder{color:rgba(255,255,255,.24)}
+.storyTitle:focus{outline:none}
+.storyPhotoBox{width:100%;border-radius:18px;border:1.5px dashed var(--border);background:var(--surface2);min-height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;margin-bottom:18px}
+.storyPhotoEmpty{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
+.storyPhotoEmpty span:first-child{font-size:2rem}
+.storyPreview{width:100%;display:block}
+.storyBody{width:100%;min-height:150px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;color:var(--text);font-family:inherit;font-size:1.05rem;line-height:1.6;padding:15px;resize:vertical;margin-bottom:12px}
+.storyBody::placeholder{color:var(--muted)}
+.storyBody:focus{outline:none;border-color:var(--leaf)}
+.storyMsg{color:var(--muted);font-size:.9rem;min-height:20px;margin-bottom:10px}
+.storyPublish{width:100%;background:linear-gradient(120deg,var(--coral),var(--amber));color:#fff;border:none;border-radius:999px;padding:16px;font-family:inherit;font-weight:800;font-size:1.05rem;cursor:pointer;box-shadow:0 8px 24px rgba(255,138,101,.28)}
+.storyPublish:disabled{opacity:.55}
+.postStoryTitle{font-family:'Fraunces',serif;font-size:1.35rem;font-weight:800;color:var(--text);margin:2px 0 10px;line-height:1.18}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -522,7 +540,22 @@
     <button id="navAdmin" class="hide" onclick="switchView('admin')">Admin</button>
   </div>
 
-  <div id="homeView" class="hide">
+  <div id="storyView" class="hide">
+      <div class="storyWrap">
+        <button class="storyBack" onclick="switchView('home')">← Back</button>
+        <div class="storyKicker" id="storyKicker">Tell your story</div>
+        <input id="storyTitle" class="storyTitle" maxlength="80" placeholder="Give it a title…" />
+        <div class="storyPhotoBox" onclick="var f=$('storyFile'); if(f) f.click();">
+          <div class="storyPhotoEmpty" id="storyPhotoEmpty"><span>📷</span><span>Add a photo</span></div>
+          <img id="storyPreview" class="storyPreview hide" alt="" />
+        </div>
+        <textarea id="storyBody" class="storyBody" maxlength="1500" placeholder="Tell the story behind it…"></textarea>
+        <div class="storyMsg" id="storyMsg"></div>
+        <button class="storyPublish" id="storyPublishBtn" onclick="publishStory()">Publish story</button>
+        <input id="storyFile" type="file" accept="image/*" class="hide" onchange="onStoryFile(event)" />
+      </div>
+    </div>
+    <div id="homeView" class="hide">
       <section class="homeHero">
         <div class="hhKicker">🌍 Earthafying</div>
         <h1 class="hhTitle">We're all<br>from here.</h1>
@@ -532,9 +565,9 @@
       <div class="homeSection">
         <div class="homeSectionTitle">Stories from our home</div>
         <div class="storyGrid">
-          <article class="storyCard sc1"><h3>The same sky</h3><p>Somewhere right now, someone is watching the same sun you are. Different corner, same sky. Share the light where you are.</p><button onclick="switchView('feed')">Share your sky →</button></article>
-          <article class="storyCard sc2"><h3>A stranger's kindness</h3><p>The world is quietly full of small mercies — a held door, a shared umbrella, a smile you'll never see again. Show us one you noticed today.</p><button onclick="switchView('feed')">Share a kindness →</button></article>
-          <article class="storyCard sc3"><h3>Where you're from</h3><p>Every place holds a feeling only the people who love it can capture. Show us your ordinary corner — the one that's home to you.</p><button onclick="switchView('feed')">Share your corner →</button></article>
+          <article class="storyCard sc1"><h3>The same sky</h3><p>Somewhere right now, someone is watching the same sun you are. Different corner, same sky. Share the light where you are.</p><button onclick="openStory('sky')">Share your sky →</button></article>
+          <article class="storyCard sc2"><h3>A stranger's kindness</h3><p>The world is quietly full of small mercies — a held door, a shared umbrella, a smile you'll never see again. Show us one you noticed today.</p><button onclick="openStory('kindness')">Share a kindness →</button></article>
+          <article class="storyCard sc3"><h3>Where you're from</h3><p>Every place holds a feeling only the people who love it can capture. Show us your ordinary corner — the one that's home to you.</p><button onclick="openStory('corner')">Share your corner →</button></article>
         </div>
       </div>
       <div class="homeSection">
@@ -544,7 +577,7 @@
       <section class="homeJoin">
         <h2>Come add your moment.</h2>
         <p>No ads. Nothing for sale. Just people, sharing the world as it really looks.</p>
-        <button class="hhCta" onclick="switchView('feed')">Start sharing →</button>
+        <button class="hhCta" onclick="openStory()">Start a story →</button>
       </section>
     </div>
     <div id="feedView">
@@ -723,7 +756,7 @@
   function flagEmoji(cc){ if(!cc||cc.length!==2)return ""; var A=127397; return cc.toUpperCase().replace(/[A-Z]/g,function(ch){return String.fromCodePoint(A+ch.charCodeAt(0));}); }
   function fillCountrySelect(el,current){ if(!el)return; var h='<option value="">🌍 Prefer not to say</option>'; for(var i=0;i<COUNTRIES.length;i++){var c=COUNTRIES[i];h+='<option value="'+c[0]+'"'+(current===c[0]?" selected":"")+'>'+flagEmoji(c[0])+" "+c[1]+'</option>';} el.value=current||""; el.innerHTML=h; el.value=current||""; }
   function parsePost(content){
-    var c=content||"", country=null, music=null, pulse=null, place=null, planet=false;
+    var c=content||"", country=null, music=null, pulse=null, place=null, planet=false, title=null, story=false;
     var wm=c.match(/\[\[WP:(\d{8})\]\]/);
     if(wm){ pulse=wm[1]; c=c.replace(wm[0],""); }
     var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
@@ -731,9 +764,11 @@
     var lm=c.match(/\[\[LOC:([\s\S]*?)\]\]/);
     if(lm){ place=lm[1].trim(); c=c.replace(lm[0],""); }
     if(c.indexOf("[[PLANET]]")>=0){ planet=true; c=c.replace("[[PLANET]]",""); }
+    var tm=c.match(/\[\[TITLE:([\s\S]*?)\]\]/); if(tm){ title=tm[1].trim(); c=c.replace(tm[0],""); }
+    if(c.indexOf("[[STORY]]")>=0){ story=true; c=c.replace("[[STORY]]",""); }
     var i=c.indexOf("[[MUSIC]]");
     if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
-    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place, planet:planet};
+    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place, planet:planet, title:title, story:story};
   }
   function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
   function populatePlaces(){ var s=$("postPlace"); if(!s||s.tagName!=="SELECT"||s._filled)return; s._filled=1; try{ for(var i=0;i<COUNTRIES.length;i++){ var o=document.createElement("option"); o.value=COUNTRIES[i][0]; o.textContent=COUNTRIES[i][1]; s.appendChild(o); } }catch(e){} }
@@ -985,6 +1020,61 @@
   }
 
   var eaSub=false; /* true when showing a sub-view (People / Me / someone's profile) with a pushed history entry */
+  var pendingStoryFile=null;
+  function onStoryFile(e){ var f=e.target.files&&e.target.files[0]; if(!f)return; pendingStoryFile=f; var p=$("storyPreview"); if(p){ p.src=URL.createObjectURL(f); p.classList.remove("hide"); } var em=$("storyPhotoEmpty"); if(em) em.classList.add("hide"); }
+  function openStory(theme){
+    var K={sky:{k:"Share your sky",t:"The sky where I am…"},kindness:{k:"Share a kindness",t:"A kindness I saw…"},corner:{k:"Where you're from",t:"My corner of the world…"}};
+    var c=K[theme]||{k:"Tell your story",t:"Give it a title…"};
+    if($("storyKicker")) $("storyKicker").textContent=c.k;
+    if($("storyTitle")){ $("storyTitle").value=""; $("storyTitle").placeholder=c.t; }
+    if($("storyBody")) $("storyBody").value="";
+    pendingStoryFile=null;
+    var p=$("storyPreview"); if(p){ p.src=""; p.classList.add("hide"); }
+    var em=$("storyPhotoEmpty"); if(em) em.classList.remove("hide");
+    var sf=$("storyFile"); if(sf) sf.value="";
+    if($("storyMsg")) $("storyMsg").textContent="";
+    showViewInternal("story"); window.scrollTo(0,0);
+  }
+  async function publishStory(){
+    var title=($("storyTitle")?$("storyTitle").value.trim():"").replace(/[\[\]]/g,"").slice(0,80);
+    var body=($("storyBody")?$("storyBody").value.trim():"");
+    if(!title && !pendingStoryFile && !body){ if($("storyMsg"))$("storyMsg").textContent="Add a title, a photo, or a few words first."; return; }
+    if(!currentUser) return promptSignup("Sign up to publish your story 🌍");
+    var btn=$("storyPublishBtn"); if(btn) btn.disabled=true;
+    var name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
+    var imageUrl=null, upPath=null;
+    try{
+      if(pendingStoryFile){
+        if($("storyMsg"))$("storyMsg").textContent="Uploading photo…";
+        var blob=await resizeImage(pendingStoryFile,2560,0.92);
+        upPath=currentUser.id+"/"+Date.now()+".jpg";
+        var up=await sb.storage.from("photos").upload(upPath,blob,{contentType:"image/jpeg"});
+        if(up.error)throw up.error;
+        imageUrl=sb.storage.from("photos").getPublicUrl(upPath).data.publicUrl;
+      }
+      if($("storyMsg"))$("storyMsg").textContent="Checking with our safety guard…";
+      var mod=await moderateContent(title+"\n"+body,imageUrl);
+      if(!mod.allowed){
+        if(upPath){ try{ await sb.storage.from("photos").remove([upPath]); }catch(e){} }
+        if($("storyMsg"))$("storyMsg").textContent="This doesn't fit Earthafying's kind space, so it wasn't published.";
+        if(btn) btn.disabled=false; return;
+      }
+      var finalContent=body;
+      if(title){ finalContent="[[TITLE:"+title+"]]"+finalContent; }
+      finalContent="[[STORY]]"+finalContent;
+      var cc=myCountry(); if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
+      if($("storyMsg"))$("storyMsg").textContent="Publishing…";
+      var ins=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:imageUrl});
+      if(ins.error)throw ins.error;
+      if($("storyTitle"))$("storyTitle").value=""; if($("storyBody"))$("storyBody").value=""; pendingStoryFile=null;
+      var p=$("storyPreview"); if(p){ p.src=""; p.classList.add("hide"); }
+      var em=$("storyPhotoEmpty"); if(em) em.classList.remove("hide");
+      if($("storyFile"))$("storyFile").value="";
+      await loadFeed(); try{ loadHome(); }catch(e){}
+      switchView("feed");
+    }catch(err){ if($("storyMsg"))$("storyMsg").textContent="Couldn't publish: "+(err.message||err); }
+    if(btn) btn.disabled=false;
+  }
   async function loadHome(){
     var el=$("homeMoments"); if(!el) return;
     try{
@@ -1014,6 +1104,7 @@
     $("navProfile").classList.toggle("active",v==="profile");
     var na=$("navAdmin"); if(na) na.classList.toggle("active",v==="admin");
     var hv=$("homeView"); if(hv) hv.classList.toggle("hide",v!=="home");
+    var sv=$("storyView"); if(sv) sv.classList.toggle("hide",v!=="story");
     $("feedView").classList.toggle("hide",v!=="feed");
     $("peopleView").classList.toggle("hide",v!=="people");
     $("profileView").classList.toggle("hide",v!=="profile");
@@ -1107,6 +1198,7 @@
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
       const music=parsedM.music?('<div class="musicWrap">'+musicEmbedHtml(parsedM.music)+'</div>'):'';
       const place=parsedM.place?'<div class="postPlace">📍 '+escapeHtml(parsedM.place)+'</div>':'';
+      const storyTitle=parsedM.title?'<div class="postStoryTitle">'+escapeHtml(parsedM.title)+'</div>':'';
       const planetBadge=parsedM.planet?'<span class="planetBadge">🌿 Planet</span>':'';
       return '<div class="post" id="post-'+p.id+'">'+
         '<div class="head">'+avatarTag(p.author_name)+
@@ -1114,7 +1206,7 @@
         ((currentUser&&p.user_id===currentUser.id)?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
-        img+place+body+music+
+        storyTitle+img+place+body+music+
         '<div class="actions" id="actions-'+p.id+'">'+renderActions(p.id)+'</div>'+
         '<div class="comments hide" id="comments-'+p.id+'">'+
           '<div class="clist" id="clist-'+p.id+'">'+renderCommentList(p.id)+'</div>'+
