@@ -555,7 +555,7 @@
     <button id="navAdmin" class="hide" onclick="switchView('admin')">Admin</button>
   </div>
 
-  <div id="createSheet" class="createSheet hide" onclick="if(event.target===this)closeCreate()">
+  <div id="createSheet" class="createSheet hide" style="display:none" onclick="if(event.target===this)closeCreate()">
       <div class="csCard">
         <button class="csClose" onclick="closeCreate()">✕</button>
         <div class="csTitle">Share something</div>
@@ -1102,8 +1102,8 @@
     }catch(err){ if($("storyMsg"))$("storyMsg").textContent="Couldn't publish: "+(err.message||err); }
     if(btn) btn.disabled=false;
   }
-  function openCreateSheet(){ var s=$("createSheet"); if(s) s.classList.remove("hide"); }
-  function closeCreate(){ var s=$("createSheet"); if(s) s.classList.add("hide"); }
+  function openCreateSheet(){ var s=$("createSheet"); if(s){ s.classList.remove("hide"); s.style.display="flex"; } }
+  function closeCreate(){ var s=$("createSheet"); if(s){ s.classList.add("hide"); s.style.display="none"; } }
   function openCreate(type){
     closeCreate();
     if(type==="story"){ openStory(); return; }
