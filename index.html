@@ -406,7 +406,8 @@
 .storyPublish{width:100%;background:linear-gradient(120deg,var(--coral),var(--amber));color:#fff;border:none;border-radius:999px;padding:16px;font-family:inherit;font-weight:800;font-size:1.05rem;cursor:pointer;box-shadow:0 8px 24px rgba(255,138,101,.28)}
 .storyPublish:disabled{opacity:.55}
 .postStoryTitle{font-family:'Anton',sans-serif;font-weight:400;font-size:1.7rem;text-transform:uppercase;letter-spacing:.015em;color:var(--text);margin:2px 0 10px;line-height:1.06}
-.createSheet{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.62);display:flex;align-items:flex-end;justify-content:center}
+.createSheet{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.62);display:none}
+.createSheet:not(.hide){display:flex;align-items:flex-end;justify-content:center}
 .createSheet .csCard{width:100%;max-width:520px;background:#151b12;border-top-left-radius:24px;border-top-right-radius:24px;border:1px solid var(--border);border-bottom:none;padding:22px 18px 30px;position:relative;animation:csUp .2s ease}
 @keyframes csUp{from{transform:translateY(28px);opacity:.5}to{transform:translateY(0);opacity:1}}
 .csClose{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--muted);font-size:1.15rem;cursor:pointer}
