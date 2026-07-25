@@ -390,14 +390,15 @@
 #storyView{min-height:100vh}
 .storyWrap{max-width:640px;margin:0 auto;padding:22px 18px 64px}
 .storyBack{background:none;border:none;color:var(--muted);font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;padding:6px 0;margin-bottom:16px}
-.storyKicker{font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:var(--amber);font-weight:800;margin-bottom:12px}
-.storyTitle{width:100%;background:none;border:none;color:var(--text);font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(2.6rem,12vw,3.9rem);line-height:1.02;text-transform:uppercase;letter-spacing:.01em;padding:0;margin-bottom:18px}
+.storyKicker{font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:#ff5b5b;font-weight:800;margin-bottom:8px}
+.storyLabel{font-size:.72rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 0 6px}
+.storyTitle{display:block;width:100%;background:none;border:none;color:var(--text);font-family:'Anton',sans-serif;font-weight:400;font-size:clamp(2rem,9.5vw,3.2rem);line-height:1.04;text-transform:uppercase;letter-spacing:.01em;padding:0;margin-bottom:18px;resize:none;overflow:hidden;word-break:break-word;min-height:1.1em}
 .storyTitle::placeholder{color:rgba(255,255,255,.24)}
 .storyTitle:focus{outline:none}
-.storyPhotoBox{width:100%;border-radius:18px;border:1.5px dashed var(--border);background:var(--surface2);min-height:190px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;margin-bottom:18px}
-.storyPhotoEmpty{display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--muted);font-size:.95rem}
+.storyPhotoBox{position:relative;width:100%;border-radius:18px;border:1px solid var(--border);background:var(--surface2);overflow:hidden;cursor:pointer;margin-bottom:18px}
+.storyPhotoEmpty{min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:.95rem}
 .storyPhotoEmpty span:first-child{font-size:2rem}
-.storyPreview{width:100%;display:block}
+.storyPreview{width:100%;display:block;max-height:72vh;object-fit:cover}
 .storyBody{width:100%;min-height:150px;background:var(--surface2);border:1px solid var(--border);border-radius:16px;color:var(--text);font-family:inherit;font-size:1.05rem;line-height:1.6;padding:15px;resize:vertical;margin-bottom:12px}
 .storyBody::placeholder{color:var(--muted)}
 .storyBody:focus{outline:none;border-color:var(--leaf)}
@@ -543,8 +544,9 @@
   <div id="storyView" class="hide">
       <div class="storyWrap">
         <button class="storyBack" onclick="switchView('home')">← Back</button>
-        <div class="storyKicker" id="storyKicker">Tell your story</div>
-        <input id="storyTitle" class="storyTitle" maxlength="80" placeholder="Give it a title…" />
+        <div class="storyKicker" id="storyKicker">Share your story</div>
+        <div class="storyLabel">Title</div>
+        <textarea id="storyTitle" class="storyTitle" maxlength="80" rows="1" placeholder="Give it a title…" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
         <div class="storyPhotoBox" onclick="var f=$('storyFile'); if(f) f.click();">
           <div class="storyPhotoEmpty" id="storyPhotoEmpty"><span>📷</span><span>Add a photo</span></div>
           <img id="storyPreview" class="storyPreview hide" alt="" />
@@ -1024,9 +1026,9 @@
   function onStoryFile(e){ var f=e.target.files&&e.target.files[0]; if(!f)return; pendingStoryFile=f; var p=$("storyPreview"); if(p){ p.src=URL.createObjectURL(f); p.classList.remove("hide"); } var em=$("storyPhotoEmpty"); if(em) em.classList.add("hide"); }
   function openStory(theme){
     var K={sky:{k:"Share your sky",t:"The sky where I am…"},kindness:{k:"Share a kindness",t:"A kindness I saw…"},corner:{k:"Where you're from",t:"My corner of the world…"}};
-    var c=K[theme]||{k:"Tell your story",t:"Give it a title…"};
+    var c=K[theme]||{k:"Share your story",t:"Give it a title…"};
     if($("storyKicker")) $("storyKicker").textContent=c.k;
-    if($("storyTitle")){ $("storyTitle").value=""; $("storyTitle").placeholder=c.t; }
+    if($("storyTitle")){ $("storyTitle").value=""; $("storyTitle").placeholder=c.t; $("storyTitle").style.height="auto"; }
     if($("storyBody")) $("storyBody").value="";
     pendingStoryFile=null;
     var p=$("storyPreview"); if(p){ p.src=""; p.classList.add("hide"); }
@@ -1036,7 +1038,7 @@
     showViewInternal("story"); window.scrollTo(0,0);
   }
   async function publishStory(){
-    var title=($("storyTitle")?$("storyTitle").value.trim():"").replace(/[\[\]]/g,"").slice(0,80);
+    var title=($("storyTitle")?$("storyTitle").value.trim():"").replace(/[\r\n]+/g," ").replace(/[\[\]]/g,"").slice(0,80);
     var body=($("storyBody")?$("storyBody").value.trim():"");
     if(!title && !pendingStoryFile && !body){ if($("storyMsg"))$("storyMsg").textContent="Add a title, a photo, or a few words first."; return; }
     if(!currentUser) return promptSignup("Sign up to publish your story 🌍");
