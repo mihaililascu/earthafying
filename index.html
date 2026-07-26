@@ -420,6 +420,16 @@
 .csOpt .csTx span{color:var(--muted);font-size:.82rem;margin-top:2px}
 .csOpt:active{border-color:var(--leaf)}
 .hhBrowse{display:inline-block;margin-top:14px;background:none;border:none;color:var(--muted);font-family:inherit;font-size:.95rem;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.albumThumbs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.albThumb{position:relative;width:88px;height:88px;border-radius:12px;overflow:hidden;background:var(--surface2)}
+.albThumb img{width:100%;height:100%;object-fit:cover;display:block}
+.albRm{position:absolute;top:3px;right:3px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(0,0,0,.6);color:#fff;font-size:.7rem;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.albAdd{width:88px;height:88px;border-radius:12px;border:1.5px dashed var(--border);background:var(--surface2);color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;font-size:1.4rem;cursor:pointer;font-family:inherit}
+.albAdd span{font-size:.7rem}
+.albumWrap{position:relative}
+.albumStrip{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-snap-type:x mandatory;padding-bottom:2px}
+.albImg{flex:0 0 82%;aspect-ratio:4/5;object-fit:cover;border-radius:12px;scroll-snap-align:center;cursor:pointer}
+.albumBadge{position:absolute;top:8px;right:8px;z-index:2;background:rgba(0,0,0,.6);color:#fff;font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:999px;pointer-events:none}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -579,6 +589,20 @@
         <div class="storyMsg" id="storyMsg"></div>
         <button class="storyPublish" id="storyPublishBtn" onclick="publishStory()">Publish story</button>
         <input id="storyFile" type="file" accept="image/*" class="hide" onchange="onStoryFile(event)" />
+      </div>
+    </div>
+    <div id="albumView" class="hide">
+      <div class="storyWrap">
+        <button class="storyBack" onclick="switchView('home')">← Back</button>
+        <div class="storyKicker">Share an album</div>
+        <div class="storyLabel">Title</div>
+        <textarea id="albumTitle" class="storyTitle" maxlength="80" rows="1" placeholder="Name your album…" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        <div class="storyLabel">Photos</div>
+        <div id="albumThumbs" class="albumThumbs"></div>
+        <input id="albumFiles" type="file" accept="image/*" multiple class="hide" onchange="onAlbumFiles(event)" />
+        <textarea id="albumBody" class="storyBody" maxlength="1500" placeholder="A few words about these…"></textarea>
+        <div class="storyMsg" id="albumMsg"></div>
+        <button class="storyPublish" id="albumPublishBtn" onclick="publishAlbum()">Publish album</button>
       </div>
     </div>
     <div id="homeView" class="hide">
@@ -783,7 +807,7 @@
   function flagEmoji(cc){ if(!cc||cc.length!==2)return ""; var A=127397; return cc.toUpperCase().replace(/[A-Z]/g,function(ch){return String.fromCodePoint(A+ch.charCodeAt(0));}); }
   function fillCountrySelect(el,current){ if(!el)return; var h='<option value="">🌍 Prefer not to say</option>'; for(var i=0;i<COUNTRIES.length;i++){var c=COUNTRIES[i];h+='<option value="'+c[0]+'"'+(current===c[0]?" selected":"")+'>'+flagEmoji(c[0])+" "+c[1]+'</option>';} el.value=current||""; el.innerHTML=h; el.value=current||""; }
   function parsePost(content){
-    var c=content||"", country=null, music=null, pulse=null, place=null, planet=false, title=null, story=false;
+    var c=content||"", country=null, music=null, pulse=null, place=null, planet=false, title=null, story=false, album=[];
     var wm=c.match(/\[\[WP:(\d{8})\]\]/);
     if(wm){ pulse=wm[1]; c=c.replace(wm[0],""); }
     var cm=c.match(/\[\[C:([A-Za-z]{2})\]\]/);
@@ -793,9 +817,10 @@
     if(c.indexOf("[[PLANET]]")>=0){ planet=true; c=c.replace("[[PLANET]]",""); }
     var tm=c.match(/\[\[TITLE:([\s\S]*?)\]\]/); if(tm){ title=tm[1].trim(); c=c.replace(tm[0],""); }
     if(c.indexOf("[[STORY]]")>=0){ story=true; c=c.replace("[[STORY]]",""); }
+    var am=c.match(/\[\[ALBUM:([\s\S]*?)\]\]/); if(am){ album=am[1]?am[1].split("|").filter(Boolean):[]; c=c.replace(am[0],""); }
     var i=c.indexOf("[[MUSIC]]");
     if(i>=0){ music=c.slice(i+9).trim(); c=c.slice(0,i); }
-    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place, planet:planet, title:title, story:story};
+    return {caption:c.trim(), music:music, country:country, pulse:pulse, place:place, planet:planet, title:title, story:story, album:album};
   }
   function myCountry(){ return (currentUser&&currentUser.user_metadata&&currentUser.user_metadata.country)||""; }
   function populatePlaces(){ var s=$("postPlace"); if(!s||s.tagName!=="SELECT"||s._filled)return; s._filled=1; try{ for(var i=0;i<COUNTRIES.length;i++){ var o=document.createElement("option"); o.value=COUNTRIES[i][0]; o.textContent=COUNTRIES[i][1]; s.appendChild(o); } }catch(e){} }
@@ -1107,9 +1132,76 @@
   function openCreate(type){
     closeCreate();
     if(type==="story"){ openStory(); return; }
-    if(type==="album"){ alert("Albums are coming next — I'm building them for you. 🖼️"); return; }
+    if(type==="album"){ openAlbum(); return; }
     switchView("feed");
     setTimeout(function(){ var t=$("postText"); if(t){ t.focus(); } },140);
+  }
+  var pendingAlbumFiles=[];
+  function albumGalleryHtml(first, rest){
+    var all=(first?[first]:[]).concat(rest||[]);
+    var imgs=all.map(function(u){ return '<img class="albImg" src="'+escapeHtml(u)+'" loading="lazy" onclick="openPhoto(this.src)" />'; }).join("");
+    return '<div class="albumWrap"><div class="albumBadge">🖼️ '+all.length+'</div><div class="albumStrip">'+imgs+'</div></div>';
+  }
+  function renderAlbumThumbs(){
+    var box=$("albumThumbs"); if(!box) return;
+    var h=pendingAlbumFiles.map(function(f,i){ return '<div class="albThumb"><img src="'+URL.createObjectURL(f)+'" alt="" /><button class="albRm" onclick="removeAlbumPhoto('+i+')">✕</button></div>'; }).join("");
+    h+='<button class="albAdd" onclick="var f=$(\'albumFiles\'); if(f) f.click();">＋<span>Add</span></button>';
+    box.innerHTML=h;
+  }
+  function onAlbumFiles(e){
+    var fs=e.target.files; if(!fs) return;
+    for(var i=0;i<fs.length;i++){ if(pendingAlbumFiles.length<10) pendingAlbumFiles.push(fs[i]); }
+    e.target.value="";
+    renderAlbumThumbs();
+  }
+  function removeAlbumPhoto(i){ pendingAlbumFiles.splice(i,1); renderAlbumThumbs(); }
+  function openAlbum(){
+    pendingAlbumFiles=[];
+    if($("albumTitle")){ $("albumTitle").value=""; $("albumTitle").style.height="auto"; }
+    if($("albumBody")) $("albumBody").value="";
+    if($("albumMsg")) $("albumMsg").textContent="";
+    renderAlbumThumbs();
+    showViewInternal("album"); window.scrollTo(0,0);
+  }
+  async function publishAlbum(){
+    var title=($("albumTitle")?$("albumTitle").value.trim():"").replace(/[\r\n]+/g," ").replace(/[\[\]|]/g,"").slice(0,80);
+    var body=($("albumBody")?$("albumBody").value.trim():"");
+    if(pendingAlbumFiles.length<2){ if($("albumMsg"))$("albumMsg").textContent="An album needs at least 2 photos."; return; }
+    if(!currentUser) return promptSignup("Sign up to publish your album 🌍");
+    var btn=$("albumPublishBtn"); if(btn) btn.disabled=true;
+    var name=(currentUser.user_metadata&&currentUser.user_metadata.full_name)||"Someone";
+    var urls=[], paths=[];
+    try{
+      for(var i=0;i<pendingAlbumFiles.length;i++){
+        if($("albumMsg"))$("albumMsg").textContent="Uploading photo "+(i+1)+" of "+pendingAlbumFiles.length+"…";
+        var blob=await resizeImage(pendingAlbumFiles[i],2560,0.92);
+        var path=currentUser.id+"/"+Date.now()+"-"+i+".jpg";
+        var up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
+        if(up.error)throw up.error;
+        urls.push(sb.storage.from("photos").getPublicUrl(path).data.publicUrl); paths.push(path);
+      }
+      if($("albumMsg"))$("albumMsg").textContent="Checking with our safety guard…";
+      var ok=true;
+      var modText=await moderateContent(title+"\n"+body, urls[0]); if(!modText.allowed) ok=false;
+      if(ok){ for(var j=1;j<urls.length;j++){ var m=await moderateContent("",urls[j]); if(!m.allowed){ ok=false; break; } } }
+      if(!ok){
+        for(var k=0;k<paths.length;k++){ try{ await sb.storage.from("photos").remove([paths[k]]); }catch(e){} }
+        if($("albumMsg"))$("albumMsg").textContent="One of these doesn't fit Earthafying's kind space, so the album wasn't published.";
+        if(btn) btn.disabled=false; return;
+      }
+      var extra=urls.slice(1);
+      var finalContent=body;
+      if(title){ finalContent="[[TITLE:"+title+"]]"+finalContent; }
+      finalContent="[[ALBUM:"+extra.join("|")+"]]"+finalContent;
+      var cc=myCountry(); if(cc){ finalContent="[[C:"+cc+"]]"+finalContent; }
+      if($("albumMsg"))$("albumMsg").textContent="Publishing…";
+      var ins=await sb.from("posts").insert({user_id:currentUser.id,author_name:name,content:finalContent,image_url:urls[0]});
+      if(ins.error)throw ins.error;
+      pendingAlbumFiles=[]; if($("albumTitle"))$("albumTitle").value=""; if($("albumBody"))$("albumBody").value=""; renderAlbumThumbs();
+      await loadFeed(); try{ loadHome(); }catch(e){}
+      switchView("feed");
+    }catch(err){ if($("albumMsg"))$("albumMsg").textContent="Couldn't publish: "+(err.message||err); }
+    if(btn) btn.disabled=false;
   }
   async function loadHome(){
     var el=$("homeMoments"); if(!el) return;
@@ -1141,6 +1233,7 @@
     var na=$("navAdmin"); if(na) na.classList.toggle("active",v==="admin");
     var hv=$("homeView"); if(hv) hv.classList.toggle("hide",v!=="home");
     var sv=$("storyView"); if(sv) sv.classList.toggle("hide",v!=="story");
+    var alv=$("albumView"); if(alv) alv.classList.toggle("hide",v!=="album");
     $("feedView").classList.toggle("hide",v!=="feed");
     $("peopleView").classList.toggle("hide",v!=="people");
     $("profileView").classList.toggle("hide",v!=="profile");
@@ -1232,6 +1325,7 @@
       const parsedM=parsePost(p.content||"");
       const nm=escapeHtml(p.author_name||"Someone")+flagTag(parsedM.country);
       const img=p.image_url?'<img class="postimg" src="'+escapeHtml(p.image_url)+'" alt="shared moment" loading="lazy" onclick="openPhoto(this.src)" />':'';
+      const albumHtml=(parsedM.album&&parsedM.album.length)?albumGalleryHtml(p.image_url,parsedM.album):img;
       const body=(parsedM.caption&&parsedM.caption.trim())?'<div class="body">'+escapeHtml(parsedM.caption)+'</div>':'';
       const music=parsedM.music?('<div class="musicWrap">'+musicEmbedHtml(parsedM.music)+'</div>'):'';
       const place=parsedM.place?'<div class="postPlace">📍 '+escapeHtml(parsedM.place)+'</div>':'';
@@ -1243,7 +1337,7 @@
         ((currentUser&&p.user_id===currentUser.id)?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
         '</div>'+
-        storyTitle+img+place+body+music+
+        storyTitle+albumHtml+place+body+music+
         '<div class="actions" id="actions-'+p.id+'">'+renderActions(p.id)+'</div>'+
         '<div class="comments hide" id="comments-'+p.id+'">'+
           '<div class="clist" id="clist-'+p.id+'">'+renderCommentList(p.id)+'</div>'+
