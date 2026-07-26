@@ -445,6 +445,10 @@
 .adminBlock{margin:24px 0;padding:18px;border:1px solid var(--border);border-radius:16px;background:var(--surface2)}
 .hfInput{width:100%;background:#10140d;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:1rem;margin-bottom:10px}
 .hfArea{width:100%;min-height:96px;background:#10140d;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px;font-family:inherit;font-size:1rem;margin-bottom:10px;resize:vertical}
+.hfClear{width:100%;margin-top:10px;background:none;border:1px solid rgba(255,90,90,.4);color:#ff8080;border-radius:999px;padding:12px;font-family:inherit;font-weight:700;font-size:.95rem;cursor:pointer}
+.hfGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0 12px}
+.hfGrid:empty{display:none}
+.hfGridImg{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;cursor:pointer}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -643,10 +647,20 @@
         </div>
       </div>
       <div class="homeSection">
+        <div id="homeFeature2" class="homeFeature" style="display:none">
+          <div class="homeShowcase" id="hf2Reel"><img class="hsImg" id="hs2A" alt="" /><img class="hsImg" id="hs2B" alt="" /></div>
+          <div class="hfTitle" id="hf2Title"></div>
+          <div class="hfStory" id="hf2Story"></div>
+        </div>
         <div class="homeSectionTitle">From our world, today</div>
         <div id="homeMoments" class="momentsGrid"><div class="empty">Loading moments…</div></div>
       </div>
-      <section class="homeJoin">
+      <div id="homeFeature3" class="homeFeature" style="display:none;padding:0 16px">
+          <div class="hfTitle" id="hf3Title"></div>
+          <div class="hfGrid" id="hf3Grid"></div>
+          <div class="hfStory" id="hf3Story"></div>
+        </div>
+        <section class="homeJoin">
         <h2>Come add your moment.</h2>
         <p>No ads. Nothing for sale. Just people, sharing the world as it really looks.</p>
         <button class="hhCta" onclick="openStory()">Start a story →</button>
@@ -768,6 +782,29 @@
       <input id="hfEditFiles" type="file" accept="image/*" multiple class="hide" onchange="onHfFiles(event)" />
       <div class="storyMsg" id="hfEditMsg"></div>
       <button class="storyPublish" id="hfSaveBtn" onclick="saveHomeFeature()">Save Home feature</button>
+      <button class="hfClear" onclick="clearHomeFeature()">🗑 Clear / remove from Home</button>
+    </div>
+    <div class="adminBlock">
+      <h3 class="gridHead" style="margin:0 0 4px">🏠 Home feature 2 (reel)</h3>
+      <div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">A second rotating reel + title + story, shown between the stories. Your own photos only.</div>
+      <input id="hfTitleE2" class="hfInput" maxlength="80" placeholder="Title…" />
+      <textarea id="hfStoryE2" class="hfArea" maxlength="1200" placeholder="Write the story…"></textarea>
+      <div id="hfThumbs2" class="albumThumbs"></div>
+      <input id="hfFiles2" type="file" accept="image/*" multiple class="hide" onchange="onHfFilesN(event,2)" />
+      <div class="storyMsg" id="hfMsg2"></div>
+      <button class="storyPublish" id="hfSaveBtn2" onclick="saveHfN(2)">Save feature 2</button>
+      <button class="hfClear" onclick="clearHfN(2)">🗑 Clear / remove</button>
+    </div>
+    <div class="adminBlock">
+      <h3 class="gridHead" style="margin:0 0 4px">🏠 Home feature 3 (photo grid)</h3>
+      <div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">A bold title + a grid of 1–4 small photos, shown near the bottom. Your own photos only.</div>
+      <input id="hfTitleE3" class="hfInput" maxlength="80" placeholder="Title…" />
+      <textarea id="hfStoryE3" class="hfArea" maxlength="1200" placeholder="Write the story…"></textarea>
+      <div id="hfThumbs3" class="albumThumbs"></div>
+      <input id="hfFiles3" type="file" accept="image/*" multiple class="hide" onchange="onHfFilesN(event,3)" />
+      <div class="storyMsg" id="hfMsg3"></div>
+      <button class="storyPublish" id="hfSaveBtn3" onclick="saveHfN(3)">Save feature 3</button>
+      <button class="hfClear" onclick="clearHfN(3)">🗑 Clear / remove</button>
     </div>
     <h3 class="gridHead">People — live view</h3>
     <div id="adminUsers" class="adminList"><div class="gridEmpty">Loading…</div></div>
@@ -1295,6 +1332,20 @@
     }catch(e){}
     renderHfThumbs();
   }
+  async function clearHomeFeature(){
+    if(!currentUser) return;
+    if(!confirm("Remove the Home feature? This clears the title, story and photos.")) return;
+    var msg=$("hfEditMsg"); if(msg) msg.textContent="Removing…";
+    try{
+      var res=await sb.from("home_feature").upsert({id:1,title:"",story:"",photos:[],updated_at:new Date().toISOString()});
+      if(res.error)throw res.error;
+      hfExisting=[]; hfNew=[];
+      if($("hfEditTitle")) $("hfEditTitle").value="";
+      if($("hfEditStory")) $("hfEditStory").value="";
+      renderHfThumbs();
+      if(msg) msg.textContent="Removed — it is off Home now.";
+    }catch(err){ if(msg) msg.textContent="Could not remove: "+(err.message||err); }
+  }
   async function saveHomeFeature(){
     if(!currentUser) return;
     var btn=$("hfSaveBtn"); if(btn) btn.disabled=true;
@@ -1323,8 +1374,74 @@
     }catch(err){ if(msg) msg.textContent="Couldn't save: "+(err.message||err); }
     if(btn) btn.disabled=false;
   }
+  var _r2={photos:[],idx:0,active:"A",timer:null};
+  function startReel2(photos){ stopReel2(); _r2={photos:photos||[],idx:0,active:"A",timer:null}; var a=$("hs2A"),b=$("hs2B"); if(!a||!b)return; if(!_r2.photos.length)return; a.src=_r2.photos[0]; a.classList.add("show"); b.classList.remove("show"); if(_r2.photos.length<2)return; _r2.timer=setInterval(nextReel2,2000); }
+  function stopReel2(){ if(_r2.timer){ clearInterval(_r2.timer); _r2.timer=null; } }
+  function nextReel2(){ if(!_r2.photos.length)return; _r2.idx=(_r2.idx+1)%_r2.photos.length; var nid=(_r2.active==="A")?"B":"A"; var nx=$("hs2"+nid),cur=$("hs2"+_r2.active); if(nx){nx.src=_r2.photos[_r2.idx];nx.classList.add("show");} if(cur)cur.classList.remove("show"); _r2.active=nid; }
+  async function loadHomeFeatures23(){
+    try{
+      var r=await sb.from("home_feature").select("*").in("id",[2,3]);
+      var rows={}; (r.data||[]).forEach(function(x){ rows[x.id]=x; });
+      var f2=rows[2], box2=$("homeFeature2");
+      if(box2){ var p2=(f2&&f2.photos)?f2.photos:[], t2=(f2&&f2.title)||"", s2=(f2&&f2.story)||""; if((!p2.length)&&!t2&&!s2){ box2.style.display="none"; stopReel2(); } else { box2.style.display=""; startReel2(p2); if($("hf2Title"))$("hf2Title").textContent=t2; if($("hf2Story"))$("hf2Story").textContent=s2; } }
+      var f3=rows[3], box3=$("homeFeature3");
+      if(box3){ var p3=(f3&&f3.photos)?f3.photos:[], t3=(f3&&f3.title)||"", s3=(f3&&f3.story)||""; if((!p3.length)&&!t3&&!s3){ box3.style.display="none"; } else { box3.style.display=""; var g=$("hf3Grid"); if(g) g.innerHTML=p3.slice(0,4).map(function(u){return '<img class="hfGridImg" src="'+escapeHtml(u)+'" onclick="openPhoto(this.src)" />';}).join(""); if($("hf3Title"))$("hf3Title").textContent=t3; if($("hf3Story"))$("hf3Story").textContent=s3; } }
+    }catch(e){}
+  }
+  var hfSlots={2:{existing:[],knew:[]},3:{existing:[],knew:[]}};
+  function renderHfN(n){
+    var box=$("hfThumbs"+n); if(!box) return; var st=hfSlots[n];
+    var h=st.existing.map(function(u,i){return '<div class="albThumb"><img src="'+escapeHtml(u)+'" alt="" /><button class="albRm" onclick="rmHfExN('+n+','+i+')">✕</button></div>';}).join("");
+    h+=st.knew.map(function(f,i){return '<div class="albThumb"><img src="'+URL.createObjectURL(f)+'" alt="" /><button class="albRm" onclick="rmHfNewN('+n+','+i+')">✕</button></div>';}).join("");
+    var mx=(n===3)?4:12;
+    if(st.existing.length+st.knew.length<mx) h+='<button class="albAdd" onclick="var f=$(\'hfFiles'+n+'\'); if(f) f.click();">＋<span>Add</span></button>';
+    box.innerHTML=h;
+  }
+  function onHfFilesN(e,n){ var fs=e.target.files; if(!fs)return; var st=hfSlots[n]; var mx=(n===3)?4:12; for(var i=0;i<fs.length;i++){ if(st.existing.length+st.knew.length<mx) st.knew.push(fs[i]); } e.target.value=""; renderHfN(n); }
+  function rmHfExN(n,i){ hfSlots[n].existing.splice(i,1); renderHfN(n); }
+  function rmHfNewN(n,i){ hfSlots[n].knew.splice(i,1); renderHfN(n); }
+  async function loadHfN(n){
+    hfSlots[n]={existing:[],knew:[]};
+    try{ var r=await sb.from("home_feature").select("*").eq("id",n).limit(1); var f=(r.data&&r.data[0])||null; if($("hfTitleE"+n)) $("hfTitleE"+n).value=(f&&f.title)||""; if($("hfStoryE"+n)) $("hfStoryE"+n).value=(f&&f.story)||""; hfSlots[n].existing=(f&&f.photos)?f.photos.slice():[]; }catch(e){}
+    renderHfN(n);
+  }
+  async function saveHfN(n){
+    if(!currentUser) return;
+    var btn=$("hfSaveBtn"+n); if(btn) btn.disabled=true;
+    var msg=$("hfMsg"+n); var st=hfSlots[n];
+    try{
+      var newUrls=[];
+      for(var i=0;i<st.knew.length;i++){
+        if(msg) msg.textContent="Uploading photo "+(i+1)+" of "+st.knew.length+"…";
+        var blob=await resizeImage(st.knew[i],2560,0.92);
+        var path=currentUser.id+"/hf"+n+"-"+Date.now()+"-"+i+".jpg";
+        var up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
+        if(up.error)throw up.error;
+        var url=sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+        var mod=await moderateContent("",url);
+        if(!mod.allowed){ try{ await sb.storage.from("photos").remove([path]); }catch(e){} if(msg) msg.textContent="One photo did not pass moderation - not saved."; if(btn) btn.disabled=false; return; }
+        newUrls.push(url);
+      }
+      var photos=st.existing.concat(newUrls);
+      var title=($("hfTitleE"+n)?$("hfTitleE"+n).value.trim():"");
+      var story=($("hfStoryE"+n)?$("hfStoryE"+n).value.trim():"");
+      if(msg) msg.textContent="Saving…";
+      var res=await sb.from("home_feature").upsert({id:n,title:title,story:story,photos:photos,updated_at:new Date().toISOString()});
+      if(res.error)throw res.error;
+      st.existing=photos; st.knew=[]; renderHfN(n);
+      if(msg) msg.textContent="Saved! Live on Home. 🌍";
+    }catch(err){ if(msg) msg.textContent="Could not save: "+(err.message||err); }
+    if(btn) btn.disabled=false;
+  }
+  async function clearHfN(n){
+    if(!currentUser) return;
+    if(!confirm("Remove this block from Home?")) return;
+    var msg=$("hfMsg"+n);
+    try{ var res=await sb.from("home_feature").upsert({id:n,title:"",story:"",photos:[],updated_at:new Date().toISOString()}); if(res.error)throw res.error; hfSlots[n]={existing:[],knew:[]}; if($("hfTitleE"+n))$("hfTitleE"+n).value=""; if($("hfStoryE"+n))$("hfStoryE"+n).value=""; renderHfN(n); if(msg) msg.textContent="Removed."; }catch(err){ if(msg) msg.textContent="Could not remove: "+(err.message||err); }
+  }
   async function loadHome(){
     try{ loadHomeFeature(); }catch(e){}
+    try{ loadHomeFeatures23(); }catch(e){}
     var el=$("homeMoments"); if(!el) return;
     try{
       var r=await sb.from("posts").select("*").order("created_at",{ascending:false}).limit(30);
@@ -1363,7 +1480,7 @@
     if(v==="people") loadPeople();
     if(v==="profile") loadProfile();
     if(v==="admin") loadAdmin();
-    if(v==="home") loadHome(); else stopShowcase();
+    if(v==="home") loadHome(); else { stopShowcase(); stopReel2(); }
     try{window.scrollTo(0,0);}catch(e){}
     if(adminTimer){ clearInterval(adminTimer); adminTimer=null; }
     if(v==="admin"){ adminTimer=setInterval(function(){ var av=$("adminView"); if(av&&!av.classList.contains("hide")) loadAdmin(); },30000); }
@@ -1593,7 +1710,7 @@
   }
   async function loadAdmin(){
     if(!isAdmin())return;
-    try{ loadHfEditor(); }catch(e){}
+    try{ loadHfEditor(); loadHfN(2); loadHfN(3); }catch(e){}
     var todayISO=(function(){var d=new Date();d.setHours(0,0,0,0);return d.toISOString();})();
     async function cnt(table){ try{ var r=await sb.from(table).select("id",{count:"exact",head:true}); return (r.count==null?"—":r.count); }catch(e){ return "—"; } }
     async function cntToday(table){ try{ var r=await sb.from(table).select("id",{count:"exact",head:true}).gte("created_at",todayISO); return (r.count==null?null:r.count); }catch(e){ return null; } }
