@@ -449,6 +449,13 @@
 .hfGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:8px 0 12px}
 .hfGrid:empty{display:none}
 .hfGridImg{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;cursor:pointer}
+.hfStack{display:flex;flex-direction:column;gap:10px;margin:8px 0 12px}
+.hfStack:empty{display:none}
+.hfStackImg{width:100%;height:auto;display:block;border-radius:14px;cursor:pointer}
+.hfCapRow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.hfCapEdit{flex:1;background:#10140d;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:.9rem;min-width:0}
+.hfStackItem{display:flex;flex-direction:column;gap:6px}
+.hfCap{color:var(--muted);font-size:.98rem;line-height:1.5;padding:0 2px 4px}
 </style>
   <!-- Vercel Web Analytics -->
   <script>window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };</script>
@@ -634,9 +641,8 @@
       </section>
       <div class="homeSection">
         <div id="homeFeature" class="homeFeature" style="display:none">
-          <div class="homeShowcase" id="homeShowcase"><img class="hsImg" id="hsA" alt="" /><img class="hsImg" id="hsB" alt="" /></div>
-          <div class="hfSmall" id="homeFeatSmall"></div>
           <div class="hfTitle" id="homeFeatTitle"></div>
+          <div class="hfStack" id="homeFeatStack"></div>
           <div class="hfStory" id="homeFeatStory"></div>
         </div>
         <div class="homeSectionTitle">Stories from our home</div>
@@ -1304,8 +1310,8 @@
       var story=(f&&f.story)?f.story:"";
       if((!photos||!photos.length)&&!title&&!story){ box.style.display="none"; stopShowcase(); return; }
       box.style.display="";
-      startShowcase(photos&&photos.length?photos:[]);
-      var small=$("homeFeatSmall"); if(small){ small.innerHTML=(photos||[]).slice(1,4).map(function(u){ return '<img class="hfSmallImg" src="'+escapeHtml(u)+'" onclick="openPhoto(this.src)" />'; }).join(""); }
+      stopShowcase();
+      var stack=$("homeFeatStack"); if(stack){ stack.innerHTML=(photos||[]).map(function(entry){ var pp=String(entry).split("§§"); var uu=pp[0], cap=pp.slice(1).join("§§"); return '<div class="hfStackItem"><img class="hfStackImg" src="'+escapeHtml(uu)+'" onclick="openPhoto(this.src)" />'+(cap?'<div class="hfCap">'+escapeHtml(cap)+'</div>':'')+'</div>'; }).join(""); }
       var t=$("homeFeatTitle"); if(t) t.textContent=title;
       var s=$("homeFeatStory"); if(s) s.textContent=story;
     }catch(e){ box.style.display="none"; }
@@ -1313,12 +1319,12 @@
   var hfExisting=[], hfNew=[];
   function renderHfThumbs(){
     var box=$("hfEditThumbs"); if(!box) return;
-    var h=hfExisting.map(function(u,i){ return '<div class="albThumb"><img src="'+escapeHtml(u)+'" alt="" /><button class="albRm" onclick="removeHfExisting('+i+')">✕</button></div>'; }).join("");
-    h+=hfNew.map(function(f,i){ return '<div class="albThumb"><img src="'+URL.createObjectURL(f)+'" alt="" /><button class="albRm" onclick="removeHfNew('+i+')">✕</button></div>'; }).join("");
+    var h=hfExisting.map(function(e,i){ return '<div class="hfCapRow"><div class="albThumb"><img src="'+escapeHtml(e.url)+'" alt="" /><button class="albRm" onclick="removeHfExisting('+i+')">✕</button></div><input class="hfCapEdit" placeholder="Words for this photo (optional)…" value="'+escapeHtml(e.caption||"")+'" oninput="hfExisting['+i+'].caption=this.value" /></div>'; }).join("");
+    h+=hfNew.map(function(o,i){ return '<div class="hfCapRow"><div class="albThumb"><img src="'+URL.createObjectURL(o.file)+'" alt="" /><button class="albRm" onclick="removeHfNew('+i+')">✕</button></div><input class="hfCapEdit" placeholder="Words for this photo (optional)…" value="'+escapeHtml(o.caption||"")+'" oninput="hfNew['+i+'].caption=this.value" /></div>'; }).join("");
     h+='<button class="albAdd" onclick="var f=$(\'hfEditFiles\'); if(f) f.click();">＋<span>Add</span></button>';
     box.innerHTML=h;
   }
-  function onHfFiles(e){ var fs=e.target.files; if(!fs)return; for(var i=0;i<fs.length;i++){ if(hfExisting.length+hfNew.length<12) hfNew.push(fs[i]); } e.target.value=""; renderHfThumbs(); }
+  function onHfFiles(e){ var fs=e.target.files; if(!fs)return; for(var i=0;i<fs.length;i++){ if(hfExisting.length+hfNew.length<12) hfNew.push({file:fs[i],caption:""}); } e.target.value=""; renderHfThumbs(); }
   function removeHfExisting(i){ hfExisting.splice(i,1); renderHfThumbs(); }
   function removeHfNew(i){ hfNew.splice(i,1); renderHfThumbs(); }
   async function loadHfEditor(){
@@ -1328,7 +1334,7 @@
       var f=(r.data&&r.data[0])||null;
       if($("hfEditTitle")) $("hfEditTitle").value=(f&&f.title)||"";
       if($("hfEditStory")) $("hfEditStory").value=(f&&f.story)||"";
-      hfExisting=(f&&f.photos)?f.photos.slice():[];
+      hfExisting=((f&&f.photos)?f.photos:[]).map(function(entry){ var pp=String(entry).split("§§"); return {url:pp[0], caption:pp.slice(1).join("§§")}; });
     }catch(e){}
     renderHfThumbs();
   }
@@ -1354,7 +1360,7 @@
       var newUrls=[];
       for(var i=0;i<hfNew.length;i++){
         if(msg) msg.textContent="Uploading photo "+(i+1)+" of "+hfNew.length+"…";
-        var blob=await resizeImage(hfNew[i],2560,0.92);
+        var blob=await resizeImage(hfNew[i].file,2560,0.92);
         var path=currentUser.id+"/hf-"+Date.now()+"-"+i+".jpg";
         var up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
         if(up.error)throw up.error;
@@ -1363,13 +1369,15 @@
         if(!mod.allowed){ try{ await sb.storage.from("photos").remove([path]); }catch(e){} if(msg) msg.textContent="One photo didn't pass moderation — not saved."; if(btn) btn.disabled=false; return; }
         newUrls.push(url);
       }
-      var photos=hfExisting.concat(newUrls);
+      var photos=hfExisting.map(function(en){ var cp=(en.caption||"").replace(/§/g,""); return cp?(en.url+"§§"+cp):en.url; });
+      for(var k=0;k<newUrls.length;k++){ var nc=((hfNew[k]&&hfNew[k].caption)||"").replace(/§/g,""); photos.push(nc?(newUrls[k]+"§§"+nc):newUrls[k]); }
+      hfExisting=hfExisting.concat(newUrls.map(function(u,k){ return {url:u, caption:((hfNew[k]&&hfNew[k].caption)||"")}; })); hfNew=[];
       var title=($("hfEditTitle")?$("hfEditTitle").value.trim():"");
       var story=($("hfEditStory")?$("hfEditStory").value.trim():"");
       if(msg) msg.textContent="Saving…";
       var res=await sb.from("home_feature").upsert({id:1,title:title,story:story,photos:photos,updated_at:new Date().toISOString()});
       if(res.error)throw res.error;
-      hfExisting=photos; hfNew=[]; renderHfThumbs();
+      renderHfThumbs();
       if(msg) msg.textContent="Saved! It is now live on Home. 🌍";
     }catch(err){ if(msg) msg.textContent="Couldn't save: "+(err.message||err); }
     if(btn) btn.disabled=false;
