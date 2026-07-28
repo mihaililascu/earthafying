@@ -1119,8 +1119,8 @@
     var gj=$("guestJoin"),lo=$("logoutBtn");if(gj)gj.style.display="";if(lo)lo.style.display="none";
     var na=$("navAdmin"); if(na) na.classList.add("hide");
     var gw=$("guestWelcome");if(gw)gw.classList.remove("hide");var cb=$("composeBox");if(cb)cb.style.display="none";
-    showViewInternal("home");setMoment();try{logVisit("guest");}catch(e){}
-    window.scrollTo(0,0); try{ startAutoGlide(); }catch(e){}
+    showViewInternal("feed");setMoment();try{logVisit("guest");}catch(e){}
+    window.scrollTo(0,0);
     try{ await loadFeed(); }catch(e){}
   }
   function promptSignup(msg){
@@ -1136,9 +1136,9 @@
     $("myName").textContent=firstName(name);$("myAvatar").textContent=initialOf(name);
     $("authScreen").classList.add("hide");$("appScreen").classList.remove("hide");
     var gj=$("guestJoin"),lo=$("logoutBtn"),bb=$("browseBack");if(gj)gj.style.display="none";if(lo)lo.style.display="";if(bb)bb.classList.add("hide");var gw2=$("guestWelcome");if(gw2)gw2.classList.add("hide");var cb2=$("composeBox");if(cb2)cb2.style.display="";
-    showViewInternal("home");setMoment();try{logVisit("member");}catch(e){}
+    showViewInternal("feed");setMoment();try{logVisit("member");}catch(e){}
     var na=$("navAdmin"); if(na) na.classList.toggle("hide",!isAdmin());
-    window.scrollTo(0,0); startAutoGlide();
+    window.scrollTo(0,0);
     try{ await sb.from("profiles").upsert({id:user.id,full_name:name}); }catch(e){}
     try{ const pr=await sb.from("profiles").select("*").eq("id",user.id).single(); if(pr.data){ myProfile.full_name=pr.data.full_name||name; myProfile.avatar_url=pr.data.avatar_url||null; myProfile.bio=pr.data.bio||""; } }catch(e){}
     applyMyAvatar();
@@ -1488,7 +1488,7 @@
     if(v==="people") loadPeople();
     if(v==="profile") loadProfile();
     if(v==="admin") loadAdmin();
-    if(v==="home") loadHome(); else { stopShowcase(); stopReel2(); }
+    if(v==="home"){ loadHome(); try{ startAutoGlide(); }catch(e){} } else { stopShowcase(); stopReel2(); try{ cancelAuto(); }catch(e){} }
     try{window.scrollTo(0,0);}catch(e){}
     if(adminTimer){ clearInterval(adminTimer); adminTimer=null; }
     if(v==="admin"){ adminTimer=setInterval(function(){ var av=$("adminView"); if(av&&!av.classList.contains("hide")) loadAdmin(); },30000); }
