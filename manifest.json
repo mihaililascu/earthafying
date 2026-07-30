@@ -1,0 +1,17 @@
+{
+  "name": "Earthafying",
+  "short_name": "Earthafying",
+  "description": "A free, photo-first place to share one honest moment from your corner of the world. No ads, nothing for sale.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#10140d",
+  "theme_color": "#10140d",
+  "lang": "en",
+  "categories": ["social", "photo", "lifestyle"],
+  "icons": [
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any" },
+    { "src": "/apple-touch-icon.png", "type": "image/png", "sizes": "180x180", "purpose": "any" }
+  ]
+}

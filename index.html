@@ -2790,5 +2790,8 @@
       <button class="ps-cancel" onclick="closePhotoSheet()">Cancel</button>
     </div>
   </div>
+<script>
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}
+</script>
 </body>
 </html>
