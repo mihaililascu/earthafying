@@ -666,6 +666,18 @@
         <div class="homeSectionTitle">From our world, today</div>
         <div id="homeMoments" class="momentsGrid"><div class="empty">Loading moments…</div></div>
       </div>
+      <div class="homeSection">
+        <div id="homeFeature4" class="homeFeature" style="display:none">
+          <div class="hfTitle" id="homeFeatTitle4"></div>
+          <div class="hfStack" id="homeFeatStack4"></div>
+          <div class="hfStory" id="homeFeatStory4"></div>
+        </div>
+        <div id="homeFeature5" class="homeFeature" style="display:none">
+          <div class="hfTitle" id="homeFeatTitle5"></div>
+          <div class="hfStack" id="homeFeatStack5"></div>
+          <div class="hfStory" id="homeFeatStory5"></div>
+        </div>
+      </div>
       <section class="homeJoin">
         <h2>Come add your moment.</h2>
         <p>No ads. Nothing for sale. Just people, sharing the world as it really looks.</p>
@@ -811,6 +823,28 @@
       <div class="storyMsg" id="hfMsg3"></div>
       <button class="storyPublish" id="hfSaveBtn3" onclick="saveHfN(3)">Save feature 3</button>
       <button class="hfClear" onclick="clearHfN(3)">🗑 Clear / remove</button>
+    </div>
+    <div class="adminBlock">
+      <h3 class="gridHead" style="margin:0 0 4px">🏠 Home feature 4 (reel)</h3>
+      <div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">Another full-photo reel with a caption under each photo — same style as the first Home feature. Your own photos only.</div>
+      <input id="hfStackTitle4" class="hfInput" maxlength="80" placeholder="Title…" />
+      <textarea id="hfStackStory4" class="hfArea" maxlength="1200" placeholder="Write the story…"></textarea>
+      <div id="hfStackThumbs4" class="albumThumbs"></div>
+      <input id="hfStackFiles4" type="file" accept="image/*" multiple class="hide" onchange="onHfStackFiles(event,4)" />
+      <div class="storyMsg" id="hfStackMsg4"></div>
+      <button class="storyPublish" id="hfStackSave4" onclick="saveHfStack(4)">Save feature 4</button>
+      <button class="hfClear" onclick="clearHfStack(4)">🗑 Clear / remove</button>
+    </div>
+    <div class="adminBlock">
+      <h3 class="gridHead" style="margin:0 0 4px">🏠 Home feature 5 (reel)</h3>
+      <div style="color:var(--muted);font-size:.82rem;margin-bottom:12px">A third full-photo reel with a caption under each photo — same style as the first Home feature. Your own photos only.</div>
+      <input id="hfStackTitle5" class="hfInput" maxlength="80" placeholder="Title…" />
+      <textarea id="hfStackStory5" class="hfArea" maxlength="1200" placeholder="Write the story…"></textarea>
+      <div id="hfStackThumbs5" class="albumThumbs"></div>
+      <input id="hfStackFiles5" type="file" accept="image/*" multiple class="hide" onchange="onHfStackFiles(event,5)" />
+      <div class="storyMsg" id="hfStackMsg5"></div>
+      <button class="storyPublish" id="hfStackSave5" onclick="saveHfStack(5)">Save feature 5</button>
+      <button class="hfClear" onclick="clearHfStack(5)">🗑 Clear / remove</button>
     </div>
     <h3 class="gridHead">People — live view</h3>
     <div id="adminUsers" class="adminList"><div class="gridEmpty">Loading…</div></div>
@@ -1396,6 +1430,88 @@
       if(box3){ var p3=(f3&&f3.photos)?f3.photos:[], t3=(f3&&f3.title)||"", s3=(f3&&f3.story)||""; if((!p3.length)&&!t3&&!s3){ box3.style.display="none"; } else { box3.style.display=""; var g=$("hf3Grid"); if(g) g.innerHTML=p3.slice(0,4).map(function(u){return '<img class="hfGridImg" src="'+escapeHtml(u)+'" onclick="openPhoto(this.src)" />';}).join(""); if($("hf3Title"))$("hf3Title").textContent=t3; if($("hf3Story"))$("hf3Story").textContent=s3; } }
     }catch(e){}
   }
+  var hfStacks={4:{existing:[],knew:[]},5:{existing:[],knew:[]}};
+  function renderHfStackThumbs(n){
+    var box=$("hfStackThumbs"+n); if(!box) return; var S=hfStacks[n];
+    var h=S.existing.map(function(e,i){ return '<div class="hfCapRow"><div class="albThumb"><img src="'+escapeHtml(e.url)+'" alt="" /><button class="albRm" onclick="removeHfStackExisting('+n+','+i+')">✕</button></div><input class="hfCapEdit" placeholder="Words for this photo (optional)…" value="'+escapeHtml(e.caption||"")+'" oninput="hfStacks['+n+'].existing['+i+'].caption=this.value" /></div>'; }).join("");
+    h+=S.knew.map(function(o,i){ return '<div class="hfCapRow"><div class="albThumb"><img src="'+URL.createObjectURL(o.file)+'" alt="" /><button class="albRm" onclick="removeHfStackNew('+n+','+i+')">✕</button></div><input class="hfCapEdit" placeholder="Words for this photo (optional)…" value="'+escapeHtml(o.caption||"")+'" oninput="hfStacks['+n+'].knew['+i+'].caption=this.value" /></div>'; }).join("");
+    h+='<button class="albAdd" onclick="var f=$(\'hfStackFiles'+n+'\'); if(f) f.click();">＋<span>Add</span></button>';
+    box.innerHTML=h;
+  }
+  function onHfStackFiles(e,n){ var fs=e.target.files; if(!fs)return; var S=hfStacks[n]; for(var i=0;i<fs.length;i++){ if(S.existing.length+S.knew.length<12) S.knew.push({file:fs[i],caption:""}); } e.target.value=""; renderHfStackThumbs(n); }
+  function removeHfStackExisting(n,i){ hfStacks[n].existing.splice(i,1); renderHfStackThumbs(n); }
+  function removeHfStackNew(n,i){ hfStacks[n].knew.splice(i,1); renderHfStackThumbs(n); }
+  async function loadHfStackEditor(n){
+    hfStacks[n]={existing:[],knew:[]};
+    try{
+      var r=await sb.from("home_feature").select("*").eq("id",n).limit(1);
+      var f=(r.data&&r.data[0])||null;
+      if($("hfStackTitle"+n)) $("hfStackTitle"+n).value=(f&&f.title)||"";
+      if($("hfStackStory"+n)) $("hfStackStory"+n).value=(f&&f.story)||"";
+      hfStacks[n].existing=((f&&f.photos)?f.photos:[]).map(function(entry){ var pp=String(entry).split("§§"); return {url:pp[0], caption:pp.slice(1).join("§§")}; });
+    }catch(e){}
+    renderHfStackThumbs(n);
+  }
+  async function clearHfStack(n){
+    if(!currentUser) return;
+    if(!confirm("Remove this Home feature? This clears its title, story and photos.")) return;
+    var msg=$("hfStackMsg"+n); if(msg) msg.textContent="Removing…";
+    try{
+      var res=await sb.from("home_feature").upsert({id:n,title:"",story:"",photos:[],updated_at:new Date().toISOString()});
+      if(res.error)throw res.error;
+      hfStacks[n]={existing:[],knew:[]};
+      if($("hfStackTitle"+n)) $("hfStackTitle"+n).value="";
+      if($("hfStackStory"+n)) $("hfStackStory"+n).value="";
+      renderHfStackThumbs(n);
+      if(msg) msg.textContent="Removed — it is off Home now.";
+    }catch(err){ if(msg) msg.textContent="Could not remove: "+(err.message||err); }
+  }
+  async function saveHfStack(n){
+    if(!currentUser) return;
+    var btn=$("hfStackSave"+n); if(btn) btn.disabled=true;
+    var msg=$("hfStackMsg"+n); var S=hfStacks[n];
+    try{
+      var newUrls=[];
+      for(var i=0;i<S.knew.length;i++){
+        if(msg) msg.textContent="Uploading photo "+(i+1)+" of "+S.knew.length+"…";
+        var blob=await resizeImage(S.knew[i].file,2560,0.92);
+        var path=currentUser.id+"/hf"+n+"-"+Date.now()+"-"+i+".jpg";
+        var up=await sb.storage.from("photos").upload(path,blob,{contentType:"image/jpeg"});
+        if(up.error)throw up.error;
+        var url=sb.storage.from("photos").getPublicUrl(path).data.publicUrl;
+        var mod=await moderateContent("",url);
+        if(!mod.allowed){ try{ await sb.storage.from("photos").remove([path]); }catch(e){} if(msg) msg.textContent="One photo didn't pass moderation — not saved."; if(btn) btn.disabled=false; return; }
+        newUrls.push(url);
+      }
+      var photos=S.existing.map(function(en){ var cp=(en.caption||"").replace(/§/g,""); return cp?(en.url+"§§"+cp):en.url; });
+      for(var k=0;k<newUrls.length;k++){ var nc=((S.knew[k]&&S.knew[k].caption)||"").replace(/§/g,""); photos.push(nc?(newUrls[k]+"§§"+nc):newUrls[k]); }
+      S.existing=S.existing.concat(newUrls.map(function(u,k){ return {url:u, caption:((S.knew[k]&&S.knew[k].caption)||"")}; })); S.knew=[];
+      var title=($("hfStackTitle"+n)?$("hfStackTitle"+n).value.trim():"");
+      var story=($("hfStackStory"+n)?$("hfStackStory"+n).value.trim():"");
+      if(msg) msg.textContent="Saving…";
+      var res=await sb.from("home_feature").upsert({id:n,title:title,story:story,photos:photos,updated_at:new Date().toISOString()});
+      if(res.error)throw res.error;
+      renderHfStackThumbs(n);
+      if(msg) msg.textContent="Saved! It is now live on Home. 🌍";
+    }catch(err){ if(msg) msg.textContent="Couldn't save: "+(err.message||err); }
+    if(btn) btn.disabled=false;
+  }
+  async function loadHomeFeatures45(){
+    try{
+      var r=await sb.from("home_feature").select("*").in("id",[4,5]);
+      var rows={}; (r.data||[]).forEach(function(x){ rows[x.id]=x; });
+      [4,5].forEach(function(n){
+        var box=$("homeFeature"+n); if(!box) return;
+        var f=rows[n]; var photos=(f&&f.photos)?f.photos:[]; var title=(f&&f.title)||""; var story=(f&&f.story)||"";
+        if((!photos.length)&&!title&&!story){ box.style.display="none"; return; }
+        box.style.display="";
+        var stack=$("homeFeatStack"+n);
+        if(stack){ stack.innerHTML=photos.map(function(entry){ var pp=String(entry).split("§§"); var uu=pp[0], cap=pp.slice(1).join("§§"); return '<div class="hfStackItem"><img class="hfStackImg" src="'+escapeHtml(uu)+'" onclick="openPhoto(this.src)" />'+(cap?'<div class="hfCap">'+escapeHtml(cap)+'</div>':'')+'</div>'; }).join(""); }
+        if($("homeFeatTitle"+n)) $("homeFeatTitle"+n).textContent=title;
+        if($("homeFeatStory"+n)) $("homeFeatStory"+n).textContent=story;
+      });
+    }catch(e){}
+  }
   var hfSlots={2:{existing:[],knew:[]},3:{existing:[],knew:[]}};
   function renderHfN(n){
     var box=$("hfThumbs"+n); if(!box) return; var st=hfSlots[n];
@@ -1450,6 +1566,7 @@
   async function loadHome(){
     try{ loadHomeFeature(); }catch(e){}
     try{ loadHomeFeatures23(); }catch(e){}
+    try{ loadHomeFeatures45(); }catch(e){}
     var el=$("homeMoments"); if(!el) return;
     try{
       var r=await sb.from("posts").select("*").order("created_at",{ascending:false}).limit(30);
@@ -1718,7 +1835,7 @@
   }
   async function loadAdmin(){
     if(!isAdmin())return;
-    try{ loadHfEditor(); loadHfN(2); loadHfN(3); }catch(e){}
+    try{ loadHfEditor(); loadHfN(2); loadHfN(3); loadHfStackEditor(4); loadHfStackEditor(5); }catch(e){}
     var todayISO=(function(){var d=new Date();d.setHours(0,0,0,0);return d.toISOString();})();
     async function cnt(table){ try{ var r=await sb.from(table).select("id",{count:"exact",head:true}); return (r.count==null?"—":r.count); }catch(e){ return "—"; } }
     async function cntToday(table){ try{ var r=await sb.from(table).select("id",{count:"exact",head:true}).gte("created_at",todayISO); return (r.count==null?null:r.count); }catch(e){ return null; } }
