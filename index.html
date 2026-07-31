@@ -846,6 +846,8 @@
       <button class="storyPublish" id="hfStackSave5" onclick="saveHfStack(5)">Save feature 5</button>
       <button class="hfClear" onclick="clearHfStack(5)">🗑 Clear / remove</button>
     </div>
+    <h3 class="gridHead">⚠️ Reports</h3>
+    <div id="adminReports" class="adminList"><div class="gridEmpty">Loading…</div></div>
     <h3 class="gridHead">People — live view</h3>
     <div id="adminUsers" class="adminList"><div class="gridEmpty">Loading…</div></div>
     <h3 class="gridHead">Recent comments</h3>
@@ -1699,6 +1701,7 @@
         '<div class="meta"><span class="who">'+nm+'</span><span class="time">'+timeAgo(p.created_at)+'</span></div>'+planetBadge+
         ((currentUser&&p.user_id===currentUser.id)?'<button class="delPost editPost" title="Edit this post" onclick="editPost(\''+p.id+'\')">Edit</button>':'')+
         (isAdmin()?'<button class="delPost" title="Remove this post" onclick="deletePost(\''+p.id+'\')">Delete</button>':'')+
+        ((currentUser&&p.user_id!==currentUser.id&&!isAdmin())?'<button class="delPost" style="opacity:.55" title="Report this post" onclick="reportPost(\''+p.id+'\')">Report</button>':'')+
         '</div>'+
         storyTitle+albumHtml+place+body+music+
         '<div class="actions" id="actions-'+p.id+'">'+renderActions(p.id)+'</div>'+
@@ -1836,6 +1839,7 @@
   async function loadAdmin(){
     if(!isAdmin())return;
     try{ loadHfEditor(); loadHfN(2); loadHfN(3); loadHfStackEditor(4); loadHfStackEditor(5); }catch(e){}
+    try{ loadReports(); }catch(e){}
     var todayISO=(function(){var d=new Date();d.setHours(0,0,0,0);return d.toISOString();})();
     async function cnt(table){ try{ var r=await sb.from(table).select("id",{count:"exact",head:true}); return (r.count==null?"—":r.count); }catch(e){ return "—"; } }
     async function cntToday(table){ try{ var r=await sb.from(table).select("id",{count:"exact",head:true}).gte("created_at",todayISO); return (r.count==null?null:r.count); }catch(e){ return null; } }
@@ -1912,6 +1916,69 @@
     if(!confirm("Delete this post for everyone?"))return;
     try{ await sb.from("posts").delete().eq("id",id); }catch(e){}
     loadAdmin(); loadFeed();
+  }
+  async function reportPost(id){
+    if(!currentUser){ alert("Please sign in to report a post."); return; }
+    var p=(state.postById&&state.postById[id])||null;
+    var author=(p&&p.author_name)||"";
+    var excerpt="";
+    if(p){ var parsed=parsePost(p.content||""); excerpt=(parsed.caption||parsed.title||"").slice(0,200); }
+    var reason=prompt("Report this post — what's wrong with it? (optional, but it helps us)");
+    if(reason===null) return;
+    try{
+      await sb.from("reports").insert({
+        post_id:String(id),
+        post_author:author,
+        post_excerpt:excerpt,
+        reporter_id:currentUser.id,
+        reporter_name:myName(),
+        reason:(reason||"").slice(0,1000)
+      });
+    }catch(e){}
+    alert("Thank you — your report has been logged and the Earthafying team will look at it. 🌍\n\nWe'll also open a pre-filled email in case you want to add anything — just hit send, or close it if you're done.");
+    try{
+      var subject=encodeURIComponent("Report: post "+id);
+      var bodyText=["I'd like to report a post on Earthafying.","","Post by: "+author,"Post: "+excerpt,"Post ID: "+id,"","Reason: "+(reason||"(none given)"),"","\u2014 sent from Earthafying"].join("\n");
+      window.location.href="mailto:hello@earthafying.com?subject="+subject+"&body="+encodeURIComponent(bodyText);
+    }catch(e){}
+  }
+  async function loadReports(){
+    var box=$("adminReports"); if(!box) return;
+    try{
+      var r=await sb.from("reports").select("*").order("created_at",{ascending:false}).limit(100);
+      var rows=r.data||[];
+      if(!rows.length){ box.innerHTML='<div class="gridEmpty">No reports. 🌿</div>'; return; }
+      box.innerHTML=rows.map(function(x){
+        var when=x.created_at?timeAgo(x.created_at):"";
+        var who=escapeHtml(x.reporter_name||"Someone");
+        var auth=escapeHtml(x.post_author||"unknown");
+        var exc=escapeHtml(x.post_excerpt||"");
+        var rsn=escapeHtml(x.reason||"(no reason given)");
+        return '<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)">'+
+          '<div style="font-weight:700">Report on '+auth+'\u2019s post</div>'+
+          '<div style="color:var(--muted);font-size:.85rem;margin:2px 0">by '+who+' \u00b7 '+when+'</div>'+
+          (exc?'<div style="opacity:.85;margin:4px 0">\u201c'+exc+'\u201d</div>':'')+
+          '<div style="margin:4px 0"><b>Reason:</b> '+rsn+'</div>'+
+          '<div style="display:flex;gap:8px;margin-top:6px">'+
+            '<button class="backBtn" onclick="jumpToReportedPost(\''+escapeHtml(String(x.post_id))+'\')">View post</button>'+
+            '<button class="backBtn" onclick="clearReport(\''+x.id+'\')">Clear</button>'+
+          '</div>'+
+        '</div>';
+      }).join("");
+    }catch(e){ box.innerHTML='<div class="gridEmpty">Could not load reports.</div>'; }
+  }
+  async function clearReport(id){
+    if(!confirm("Clear this report from the list? (This does not delete the post.)")) return;
+    try{ await sb.from("reports").delete().eq("id",id); }catch(e){}
+    loadReports();
+  }
+  function jumpToReportedPost(pid){
+    try{ switchView('feed'); }catch(e){}
+    setTimeout(function(){
+      var el=$("post-"+pid);
+      if(el){ el.scrollIntoView({behavior:"smooth",block:"center"}); el.style.outline="2px solid #e88"; setTimeout(function(){el.style.outline="";},2500); }
+      else { alert("That post isn't in the current feed — it may have been deleted already."); }
+    },400);
   }
   async function deletePost(id){
     if(!isAdmin())return;
