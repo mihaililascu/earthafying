@@ -1,0 +1,8 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.earthafying.twa",
+    "sha256_cert_fingerprints": ["BD:19:17:B4:A7:76:EF:A0:62:38:08:C3:33:E3:0B:A0:76:B6:2E:8D:15:52:16:F1:4B:2F:0B:37:EE:AF:8A:3E"]
+  }
+}]
